@@ -1,0 +1,1 @@
+rosrun map_server map_saver -f /home/mrmat420/car4_ws/src/map/map2

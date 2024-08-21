@@ -1,0 +1,30 @@
+<?xml version="1.0"?>
+<launch>
+    
+    <node pkg="tf" type="static_transform_publisher" name="static_tf_publisher_lidar" output="screen"
+          args="0.3245 0 0 0 0 0 base_link lidar_frame 100" />
+
+    <node pkg="odometry" type="car4_odometry_calculator.py" name="odometry_calculator" />
+
+    <node pkg="odometry" type="car4_data_publisher.py" name="wheel_data_publisher" />
+
+    <node pkg="laser" type="laser_data_publisher.py" name="laser_data_publisher" />
+
+
+    <!-- <node pkg="slam_toolbox" type="async_slam_toolbox_node" name="slam_toolbox" output="screen">
+        <rosparam command="load" file="/home/mrmat420/car4_autonomous/car4_ws/src/car4_launch/launch/mapper_params_online_async.yaml" />
+    </node> -->
+
+    <node pkg="slam_toolbox" type="lifelong_slam_toolbox_node" name="slam_toolbox" output="screen">
+        <rosparam command="load" file="$(find car4_launch)/launch/mapper_params_lifelong.yaml" />
+    </node>
+
+    <!-- <node pkg="slam_toolbox" type="sync_slam_toolbox_node" name="slam_toolbox" output="screen">
+        <rosparam command="load" file="$(find slam_toolbox)/config/mapper_params_offline.yaml" />
+    </node>
+
+    <node pkg="slam_toolbox" type="sync_slam_toolbox_node" name="slam_toolbox" output="screen">
+        <rosparam command="load" file="$(find slam_toolbox)/config/mapper_params_online_sync.yaml" />
+    </node> -->
+
+</launch>

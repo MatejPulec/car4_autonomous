@@ -1,0 +1,8 @@
+prefix=/home/mrmat420/car4_autonomous/car4_ws/install
+
+Name: amcl
+Description: Description of amcl
+Version: 0.0.0
+Cflags: 
+Libs: -L${prefix}/lib 
+Requires: 

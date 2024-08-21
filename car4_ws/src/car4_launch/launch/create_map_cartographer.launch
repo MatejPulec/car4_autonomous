@@ -1,0 +1,30 @@
+<launch>  
+  <node pkg="tf" type="static_transform_publisher" name="static_tf_publisher_lidar" output="screen"
+          args="0.3245 0 0 0 0 0 base_link lidar_frame 100" />
+
+  <node pkg="odometry" type="car4_odometry_calculator.py" name="odometry_calculator" />
+
+  <node pkg="odometry" type="car4_data_publisher.py" name="wheel_data_publisher" />
+
+  <node pkg="laser" type="laser_data_publisher.py" name="laser_data_publisher" />
+
+  <arg name="odom_topic_name" value="/odom"/>
+
+  <node name="cartographer_node" pkg="cartographer_ros" type="cartographer_node" args="
+          -configuration_directory /home/mrmat420/car4_ws/src/car4_launch/
+          -configuration_basename cartographer.lua"
+        output="screen">
+
+  <!-- <node name="cartographer_node" pkg="cartographer_ros" type="cartographer_node" args="
+          -configuration_directory $(find wheelchair)/config
+          -configuration_basename cartographer_pc.lua"
+        output="screen"> -->
+  
+    <remap from="scan" to="scan" /> 
+    <remap from="odom" to="$(arg odom_topic_name)" />
+       
+  </node>
+
+  <node name="cartographer_occupancy_grid_node" pkg="cartographer_ros"
+      type="cartographer_occupancy_grid_node" args="-resolution 0.05" />
+</launch>

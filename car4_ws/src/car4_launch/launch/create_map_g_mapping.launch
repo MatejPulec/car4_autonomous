@@ -1,0 +1,41 @@
+<?xml version="1.0"?>
+<launch>
+    
+    <node pkg="tf" type="static_transform_publisher" name="static_tf_publisher_lidar" output="screen"
+          args="0.3245 0 0 0 0 0 base_link lidar_frame 100" />
+
+    <node pkg="odometry" type="car4_odometry_calculator.py" name="odometry_calculator" />
+
+    <node pkg="odometry" type="car4_data_publisher.py" name="wheel_data_publisher" />
+
+    <node pkg="laser" type="laser_data_publisher.py" name="laser_data_publisher" />
+
+    <node pkg="gmapping" type="slam_gmapping" name="slam_gmapping" output="screen">
+        <param name="base_frame"                value="base_link" />
+        <param name="map_frame"                 value="map" />
+        <param name="map_file"                  value="/home/mrmat420/car4_ws/src/map/map_lifelong_HR.yaml"/>
+        <param name="odom_frame"                value="odom" />
+        <param name="map_update_interval"       value="0.5" />
+        <param name="kernelSize"                value="1" />         <!--default - 1-->
+        <param name="sigma"                     value="0.02" />      <!--default - 0.02-->
+        <param name="lsigma"                    value="0.075" />      <!--default - 0.075-->
+        <param name="delta"                     value="0.025" />     <!--map resolution-->
+        <param name="srr"                       value="0.1"/>      <!--default - 0.1-->
+        <param name="srt"                       value="0.2"/>       <!--default - 0.2-->
+        <param name="str"                       value="0.1"/>      <!--default - 0.1-->
+        <param name="stt"                       value="0.2"/>       <!--default - 0.2-->
+        <param name="maxUrange"                 value="3.9"/>
+        <param name="maxRange"                  value="4.5"/>
+        <param name="linearUpdate"              value="0.1"/>       <!--previously - 0.1-->
+        <param name="angularUpdate"             value="0.1"/>       <!--previously - 0.1-->
+        <param name="minimumScore"              value="70.0"/>
+        <param name="xmin"                      value="-20.0"/>
+        <param name="xmax"                      value="20.0"/>
+        <param name="ymin"                      value="-20.0"/>
+        <param name="ymax"                      value="20.0"/>
+        <param name="particles"                 value="30"/>
+
+        <remap from="scan" to="scan"/>
+        <remap from="tf" to="tf"/>
+    </node>
+</launch>
