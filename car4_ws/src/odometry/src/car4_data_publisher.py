@@ -27,7 +27,8 @@ if __name__ == '__main__':
     try:
         # Retrieve the 'hz' parameter from the parameter server
         script_dir = os.path.dirname(os.path.realpath(__file__))
-        file_path = os.path.join(script_dir, '../../car4_data/wheel_data_4_trimmed.npy')
+        default_file_path = os.path.join(script_dir, '../../car4_data/wheel_data_4_trimmed.npy')
+        file_path = rospy.get_param('/wheel_data_publisher/wheel_data_file', default_file_path)
         data = np.load(file_path)
         talker(data)
     except rospy.ROSInterruptException:

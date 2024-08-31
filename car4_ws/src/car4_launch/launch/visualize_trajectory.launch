@@ -8,6 +8,7 @@
     <node pkg="odometry" type="trajectory_visualizer.py" name="visualizer" output="screen"/>
 
     <node pkg="odometry" type="car4_data_publisher.py" name="data_publisher">
+        <param name="wheel_data_file" value="$(find car4_launch)/../car4_data/wheel_data_2_8_2024.npy" />
         <param name="hz" value="$(arg rate)" />
     </node>
     

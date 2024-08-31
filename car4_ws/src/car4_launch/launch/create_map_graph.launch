@@ -6,9 +6,15 @@
 
     <node pkg="odometry" type="car4_odometry_calculator.py" name="odometry_calculator" />
 
-    <node pkg="odometry" type="car4_data_publisher.py" name="wheel_data_publisher" />
+    <node pkg="odometry" type="car4_data_publisher.py" name="wheel_data_publisher">
+        <!-- Passing the laser_data_file parameter directly to the node -->
+        <param name="wheel_data_file" value="$(find car4_launch)/../car4_data/wheel_data_2_8_2024_slow.npy" />
+    </node>
 
-    <node pkg="laser" type="laser_data_publisher.py" name="laser_data_publisher" />
+    <node pkg="laser" type="laser_data_publisher.py" name="laser_data_publisher">
+        <!-- Passing the laser_data_file parameter directly to the node -->
+        <param name="laser_data_file" value="$(find car4_launch)/../car4_data/laser_data_2_8_2024_slow.npy" />
+    </node>
 
 
     <!-- <node pkg="slam_toolbox" type="async_slam_toolbox_node" name="slam_toolbox" output="screen">
@@ -26,5 +32,8 @@
     <node pkg="slam_toolbox" type="sync_slam_toolbox_node" name="slam_toolbox" output="screen">
         <rosparam command="load" file="$(find slam_toolbox)/config/mapper_params_online_sync.yaml" />
     </node> -->
+
+    <!-- <param name="wheel_data_file" value="$(find car4_launch)/../car4_data/laser_data_4_trimmed.npy" />
+    <param name="laser_data_file" value="$(find car4_launch)/../car4_data/wheel_data_4_trimmed.npy" /> -->
 
 </launch>
