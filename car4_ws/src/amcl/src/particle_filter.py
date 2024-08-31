@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import random
 import copy
+import os
 
 
 class Particle:
@@ -243,7 +244,9 @@ angle = 0
 LIDAR_ANGLE = 240
 LIDAR_NUMBER_OF_POINTS = 50
 
-map = np.load('/home/mrmat420/car4_ws/src/amcl/array_data.npy')
+script_dir = os.path.dirname(os.path.realpath(__file__))
+file_path = os.path.join(script_dir, '../array_data.npy')
+map = np.load(file_path)
 
 angle_range = (-np.pi, np.pi)
 y, x = np.where(map == 0)

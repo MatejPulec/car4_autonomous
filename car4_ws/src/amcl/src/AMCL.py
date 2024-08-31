@@ -12,6 +12,7 @@ import random
 import copy
 from PIL import Image
 import tf
+import os
 
 
 class Laser:
@@ -318,8 +319,11 @@ def main():
     elite_size = 10
     children_size = 30
 
+    script_dir = os.path.dirname(os.path.realpath(__file__))
+    file_path = os.path.join(script_dir, '../map_lifelong_HR (copy).pgm')
+
     # Load map
-    with Image.open("/home/mrmat420/car4_ws/src/amcl/map_lifelong_HR (copy).pgm") as img:
+    with Image.open(file_path) as img:
         map = np.array(img)
     max_pos = [map.shape[1]-1, map.shape[0]-1]
     min_pos = [0, 0]
