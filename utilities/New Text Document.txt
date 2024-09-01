@@ -1,0 +1,1 @@
+pip install git+https://github.com/pasuder/hokuyo-python-lib.git
