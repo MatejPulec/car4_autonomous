@@ -1,0 +1,13 @@
+<?xml version="1.0"?>
+<launch>
+
+    <arg name="rate" default="10" />
+
+    <node pkg="odometry" type="car4_odometry_calculator.py" name="odometry_calculator" />
+
+    <node pkg="odometry" type="trajectory_visualizer.py" name="visualizer" output="screen"/>
+
+    <node pkg="odometry" type="car4_data_publisher_online.py" name="data_publisher">
+    </node>
+    
+</launch>

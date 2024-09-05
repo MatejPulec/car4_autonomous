@@ -67,14 +67,14 @@ set(odometry_CONFIG_INCLUDED TRUE)
 
 # set variables for source/devel/install prefixes
 if("FALSE" STREQUAL "TRUE")
-  set(odometry_SOURCE_PREFIX /home/mrmat420/car4_autonomous/car4_ws/src/odometry)
-  set(odometry_DEVEL_PREFIX /home/mrmat420/car4_autonomous/car4_ws/devel)
+  set(odometry_SOURCE_PREFIX /home/lattepanda/Matej_Pulec/car4_autonomous/car4_ws/src/odometry)
+  set(odometry_DEVEL_PREFIX /home/lattepanda/Matej_Pulec/car4_autonomous/car4_ws/devel)
   set(odometry_INSTALL_PREFIX "")
   set(odometry_PREFIX ${odometry_DEVEL_PREFIX})
 else()
   set(odometry_SOURCE_PREFIX "")
   set(odometry_DEVEL_PREFIX "")
-  set(odometry_INSTALL_PREFIX /home/mrmat420/car4_autonomous/car4_ws/install)
+  set(odometry_INSTALL_PREFIX /home/lattepanda/Matej_Pulec/car4_autonomous/car4_ws/install)
   set(odometry_PREFIX ${odometry_INSTALL_PREFIX})
 endif()
 
@@ -154,7 +154,7 @@ foreach(library ${libraries})
     set(lib_path "")
     set(lib "${library}-NOTFOUND")
     # since the path where the library is found is returned we have to iterate over the paths manually
-    foreach(path /home/mrmat420/car4_autonomous/car4_ws/install/lib;/home/mrmat420/catkin_ws/install_isolated/lib;/home/mrmat420/r1_wiki_ws/devel/lib;/opt/ros/noetic/lib)
+    foreach(path /home/lattepanda/Matej_Pulec/car4_autonomous/car4_ws/install/lib;/opt/ros/noetic/lib)
       find_library(lib ${library}
         PATHS ${path}
         NO_DEFAULT_PATH NO_CMAKE_FIND_ROOT_PATH)
