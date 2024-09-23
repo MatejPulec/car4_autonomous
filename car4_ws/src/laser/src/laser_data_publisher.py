@@ -36,7 +36,7 @@ def talker(data):
 
 if __name__ == '__main__':
     script_dir = os.path.dirname(os.path.realpath(__file__))
-    default_file_path = os.path.join(script_dir, '../../car4_data/laser_data_4_trimmed.npy')
+    default_file_path = os.path.join(script_dir, '../../car4_data/laser_data_test_3.npy')
     file_path = rospy.get_param('/laser_data_publisher/laser_data_file', default_file_path)
     data = np.load(file_path)
     try:
