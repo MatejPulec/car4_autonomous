@@ -212,7 +212,10 @@ class odometry:
 
     def callback(self, msg):
         # used to be range(4,16), but the output of the car changed
-        pseudo_bycicle_state = inverseAckermann(msg.data[range(3,15)], self.wheeltrack_w, self.wheelbase_L, self.wheelRadius_r)
+
+        clipped_data = np.clip(msg.data[3:15], -50, 50) #needed because of occasional mistake in data
+
+        pseudo_bycicle_state = inverseAckermann(clipped_data, self.wheeltrack_w, self.wheelbase_L, self.wheelRadius_r)
         speed = car4KinematicModel(self.wheelRadius_r, self.wheelbase_L, self.car4_state, pseudo_bycicle_state)
 
         time = msg.data[0]

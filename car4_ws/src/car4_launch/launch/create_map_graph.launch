@@ -18,7 +18,7 @@
 
 
     <!-- <node pkg="slam_toolbox" type="async_slam_toolbox_node" name="slam_toolbox" output="screen">
-        <rosparam command="load" file="/home/mrmat420/car4_autonomous/car4_ws/src/car4_launch/launch/mapper_params_online_async.yaml" />
+        <rosparam command="load" file="$(find car4_launch)/launch/mapper_params_online_async.yaml" />
     </node> -->
 
     <node pkg="slam_toolbox" type="lifelong_slam_toolbox_node" name="slam_toolbox" output="screen">
