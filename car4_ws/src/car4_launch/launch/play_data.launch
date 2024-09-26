@@ -15,6 +15,6 @@
         <param name="hz" value="$(arg rate)" />
     </node>
 
-    <!-- <node pkg="laser" type="laser_data_publisher.py" name="laser_data_publisher" /> -->
+    <node pkg="laser" type="laser_data_publisher.py" name="laser_data_publisher" />
 
 </launch>

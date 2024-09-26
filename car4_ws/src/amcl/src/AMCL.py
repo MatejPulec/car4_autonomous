@@ -308,19 +308,19 @@ def generate_scan(pos, angle, map, resolution, LIDAR_NUMBER_OF_POINTS, LIDAR_ANG
 def main():
     # SETUP
     LIDAR_ANGLE = 240
-    LIDAR_NUMBER_OF_POINTS = 50  # 682
+    LIDAR_NUMBER_OF_POINTS = 70  # 682
     init_pop_size = 500
     pop_size = 100
     no_zeros = True  # delete zeros in scan
     resolution = 0.025  # resolution of map
-    proportional_error = 0.1
-    pos_sigma = 10
+    proportional_error = 0.05
+    pos_sigma = 5
     angle_sigma = 0.25
-    elite_size = 10
-    children_size = 30
+    elite_size = 5
+    children_size = 15
 
     script_dir = os.path.dirname(os.path.realpath(__file__))
-    file_path = os.path.join(script_dir, '../map_lifelong_HR (copy).pgm')
+    file_path = os.path.join(script_dir, '../map_mashup.pgm')
 
     # Load map
     with Image.open(file_path) as img:
@@ -339,10 +339,10 @@ def main():
         'AMCL_position', PoseStamped, queue_size=10)
 
     # Population init
-    position = [39, 485]
+    position = [107, 796]
     angle = 0
     population = Population(1, angle, position, choose_randomly=False)
-    population.particles[0].position = [39, 485]
+    population.particles[0].position = [107, 796]
     population.particles[0].angle = 0
 
     # Odometry init
@@ -355,7 +355,7 @@ def main():
     pos_real = []
 
     # Create a 4x4 subplot grid
-    # fig, axes = plt.subplots(nrows=4, ncols=4, figsize=(16, 16))
+    fig, axes = plt.subplots(nrows=2, ncols=2, figsize=(4, 4))
 
     a = 400
     while a:
@@ -381,6 +381,12 @@ def main():
                                      laser_msg.angle_increment, -laser_msg.angle_increment)
 
         laser_ranges = np.array(laser_ranges)
+        
+        jumps = 0
+        for i in range(len(laser_ranges)-1):
+            if abs(laser_ranges[i]-laser_ranges[i+1])>0.5:
+                jumps += 1
+
         if no_zeros:
             nonzero_idx = np.nonzero(laser_ranges >= 0.05)
         X = np.sin(laser_angles[nonzero_idx]) * laser_ranges[nonzero_idx]
@@ -400,33 +406,33 @@ def main():
 
 
         # Example data
-        # # particles_to_plot = min(16, len(population.particles))
-        # # X_particle = [particle.X for particle in population.particles[:particles_to_plot]]
-        # # Y_particle = [particle.Y for particle in population.particles[:particles_to_plot]]
-        # # Weight_particle = [particle.weight for particle in population.particles[:particles_to_plot]]
+        particles_to_plot = min(4, len(population.particles))
+        X_particle = [particle.X for particle in population.particles[:particles_to_plot]]
+        Y_particle = [particle.Y for particle in population.particles[:particles_to_plot]]
+        Weight_particle = [particle.weight for particle in population.particles[:particles_to_plot]]
 
-        # # # Iterate over the first particles_to_plot particles and plot them in the subplots
-        # # for i, ax in enumerate(axes.flat):
-        # #     if i < particles_to_plot:
-        # #         ax.clear()
-        # #         ax.scatter(X, Y)
-        # #         ax.scatter(X_particle[i], Y_particle[i])
-        # #         ax.set_title(f'Particle {i + 1}\nWeight: {Weight_particle[i]:.4f}')
-        # #         ax.axis('equal')
+        # Iterate over the first particles_to_plot particles and plot them in the subplots
+        for i, ax in enumerate(axes.flat):
+            if i < particles_to_plot:
+                ax.clear()
+                ax.scatter(X, Y)
+                ax.scatter(X_particle[i], Y_particle[i])
+                ax.set_title(f'Particle {i + 1}\nWeight: {Weight_particle[i]:.4f}\nJumps: {jumps}')
+                ax.axis('equal')
 
-        # # # Adjust layout to prevent clipping of titles
-        # # plt.tight_layout()
+        # Adjust layout to prevent clipping of titles
+        plt.tight_layout()
 
-        # # # Show the plot
-        # plt.pause(0.1)
+        # Show the plot
+        plt.pause(0.1)
 
         
         x_est = [sublist[0] for sublist in pos_est]
         y_est = [sublist[1] for sublist in pos_est]
-        plt.clf()
-        plt.imshow(map)
-        plt.plot(x_est, y_est)
-        plt.pause(0.001)
+        # plt.clf()
+        # plt.imshow(map)
+        # plt.plot(x_est, y_est)
+        # plt.pause(0.001)
 
         particle_with_highest_weight = max(
             population.particles, key=lambda particle: particle.weight)
@@ -434,7 +440,8 @@ def main():
         pos_real.append(car4_odom_state.copy())
         pos_est.append(copy.deepcopy(particle_with_highest_weight.position))
 
-        population.resample(pos_sigma, angle_sigma, elite_size, children_size)  #todo calculate children size on the fly, maybe add random particles?
+        if jumps > 4:
+            population.resample(pos_sigma, angle_sigma, elite_size, children_size)  #todo calculate children size on the fly, maybe add random particles?
 
         quaternion = tf.transformations.quaternion_from_euler(
             0, 0, particle_with_highest_weight.angle)
