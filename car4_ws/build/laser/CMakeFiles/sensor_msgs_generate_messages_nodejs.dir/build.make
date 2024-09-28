@@ -43,10 +43,10 @@ RM = /usr/bin/cmake -E remove -f
 EQUALS = =
 
 # The top-level source directory on which CMake was run.
-CMAKE_SOURCE_DIR = /home/lattepanda/Matej_Pulec/car4_autonomous/car4_ws/src
+CMAKE_SOURCE_DIR = /home/mrmat420/car4_autonomous/car4_ws/src
 
 # The top-level build directory on which CMake was run.
-CMAKE_BINARY_DIR = /home/lattepanda/Matej_Pulec/car4_autonomous/car4_ws/build
+CMAKE_BINARY_DIR = /home/mrmat420/car4_autonomous/car4_ws/build
 
 # Utility rule file for sensor_msgs_generate_messages_nodejs.
 
@@ -63,10 +63,10 @@ laser/CMakeFiles/sensor_msgs_generate_messages_nodejs.dir/build: sensor_msgs_gen
 .PHONY : laser/CMakeFiles/sensor_msgs_generate_messages_nodejs.dir/build
 
 laser/CMakeFiles/sensor_msgs_generate_messages_nodejs.dir/clean:
-	cd /home/lattepanda/Matej_Pulec/car4_autonomous/car4_ws/build/laser && $(CMAKE_COMMAND) -P CMakeFiles/sensor_msgs_generate_messages_nodejs.dir/cmake_clean.cmake
+	cd /home/mrmat420/car4_autonomous/car4_ws/build/laser && $(CMAKE_COMMAND) -P CMakeFiles/sensor_msgs_generate_messages_nodejs.dir/cmake_clean.cmake
 .PHONY : laser/CMakeFiles/sensor_msgs_generate_messages_nodejs.dir/clean
 
 laser/CMakeFiles/sensor_msgs_generate_messages_nodejs.dir/depend:
-	cd /home/lattepanda/Matej_Pulec/car4_autonomous/car4_ws/build && $(CMAKE_COMMAND) -E cmake_depends "Unix Makefiles" /home/lattepanda/Matej_Pulec/car4_autonomous/car4_ws/src /home/lattepanda/Matej_Pulec/car4_autonomous/car4_ws/src/laser /home/lattepanda/Matej_Pulec/car4_autonomous/car4_ws/build /home/lattepanda/Matej_Pulec/car4_autonomous/car4_ws/build/laser /home/lattepanda/Matej_Pulec/car4_autonomous/car4_ws/build/laser/CMakeFiles/sensor_msgs_generate_messages_nodejs.dir/DependInfo.cmake --color=$(COLOR)
+	cd /home/mrmat420/car4_autonomous/car4_ws/build && $(CMAKE_COMMAND) -E cmake_depends "Unix Makefiles" /home/mrmat420/car4_autonomous/car4_ws/src /home/mrmat420/car4_autonomous/car4_ws/src/laser /home/mrmat420/car4_autonomous/car4_ws/build /home/mrmat420/car4_autonomous/car4_ws/build/laser /home/mrmat420/car4_autonomous/car4_ws/build/laser/CMakeFiles/sensor_msgs_generate_messages_nodejs.dir/DependInfo.cmake --color=$(COLOR)
 .PHONY : laser/CMakeFiles/sensor_msgs_generate_messages_nodejs.dir/depend
 

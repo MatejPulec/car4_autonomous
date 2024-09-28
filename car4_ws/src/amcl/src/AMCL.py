@@ -13,6 +13,11 @@ import copy
 from PIL import Image
 import tf
 import os
+import logging
+
+# Configure the logging
+logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
+
 
 
 class Laser:
@@ -339,10 +344,10 @@ def main():
         'AMCL_position', PoseStamped, queue_size=10)
 
     # Population init
-    position = [107, 796]
+    position = [114, 500]
     angle = 0
     population = Population(1, angle, position, choose_randomly=False)
-    population.particles[0].position = [107, 796]
+    population.particles[0].position = [114, 500]
     population.particles[0].angle = 0
 
     # Odometry init
@@ -354,8 +359,8 @@ def main():
     pos_est = []
     pos_real = []
 
-    # Create a 4x4 subplot grid
-    fig, axes = plt.subplots(nrows=2, ncols=2, figsize=(4, 4))
+    # # Create a 4x4 subplot grid
+    # fig, axes = plt.subplots(nrows=2, ncols=2, figsize=(4, 4))
 
     a = 400
     while a:
@@ -405,30 +410,30 @@ def main():
         # plt.show()
 
 
-        # Example data
-        particles_to_plot = min(4, len(population.particles))
-        X_particle = [particle.X for particle in population.particles[:particles_to_plot]]
-        Y_particle = [particle.Y for particle in population.particles[:particles_to_plot]]
-        Weight_particle = [particle.weight for particle in population.particles[:particles_to_plot]]
+        # # Example data
+        # particles_to_plot = min(4, len(population.particles))
+        # X_particle = [particle.X for particle in population.particles[:particles_to_plot]]
+        # Y_particle = [particle.Y for particle in population.particles[:particles_to_plot]]
+        # Weight_particle = [particle.weight for particle in population.particles[:particles_to_plot]]
 
-        # Iterate over the first particles_to_plot particles and plot them in the subplots
-        for i, ax in enumerate(axes.flat):
-            if i < particles_to_plot:
-                ax.clear()
-                ax.scatter(X, Y)
-                ax.scatter(X_particle[i], Y_particle[i])
-                ax.set_title(f'Particle {i + 1}\nWeight: {Weight_particle[i]:.4f}\nJumps: {jumps}')
-                ax.axis('equal')
+        # # Iterate over the first particles_to_plot particles and plot them in the subplots
+        # for i, ax in enumerate(axes.flat):
+        #     if i < particles_to_plot:
+        #         ax.clear()
+        #         ax.scatter(X, Y)
+        #         ax.scatter(X_particle[i], Y_particle[i])
+        #         ax.set_title(f'Particle {i + 1}\nWeight: {Weight_particle[i]:.4f}\nJumps: {jumps}')
+        #         ax.axis('equal')
 
-        # Adjust layout to prevent clipping of titles
-        plt.tight_layout()
+        # # Adjust layout to prevent clipping of titles
+        # plt.tight_layout()
 
-        # Show the plot
-        plt.pause(0.1)
+        # # Show the plot
+        # plt.pause(0.1)
 
         
-        x_est = [sublist[0] for sublist in pos_est]
-        y_est = [sublist[1] for sublist in pos_est]
+        # x_est = [sublist[0] for sublist in pos_est]
+        # y_est = [sublist[1] for sublist in pos_est]
         # plt.clf()
         # plt.imshow(map)
         # plt.plot(x_est, y_est)
@@ -454,12 +459,12 @@ def main():
             "AMCL",  # Child frame
             "map"  # Parent frame
         )
-        print(a)
+        rospy.logfatal(a)
 
-        angles = [particle.angle for particle in population.particles]
-        x_vis = [particle.position[0] for particle in population.particles]
-        y_vis = [particle.position[1] for particle in population.particles]
-        weights = [particle.weight for particle in population.particles]
+        # angles = [particle.angle for particle in population.particles]
+        # x_vis = [particle.position[0] for particle in population.particles]
+        # y_vis = [particle.position[1] for particle in population.particles]
+        # weights = [particle.weight for particle in population.particles]
 
         # Plotting
         # plt.figure(figsize=(20, 10))
