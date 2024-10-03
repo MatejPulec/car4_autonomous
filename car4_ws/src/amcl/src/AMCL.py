@@ -14,6 +14,7 @@ from PIL import Image
 import tf
 import os
 import logging
+import threading
 
 # Configure the logging
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -310,6 +311,27 @@ def generate_scan(pos, angle, map, resolution, LIDAR_NUMBER_OF_POINTS, LIDAR_ANG
     return angles, distances
 
 
+# Global variables for the latest particle position and angle
+latest_position = None
+latest_angle = None
+
+def send_tf_transformation(tf_broadcaster, resolution):
+    global latest_position, latest_angle
+    rate = rospy.Rate(10)  # 10 Hz
+    while not rospy.is_shutdown():
+        if latest_position is not None and latest_angle is not None:
+            quaternion = tf.transformations.quaternion_from_euler(0, 0, latest_angle * -1)
+            tf_broadcaster.sendTransform(
+                # Translation
+                (latest_position[0] * resolution,
+                 latest_position[1] * resolution * -1, 0),#different axes
+                quaternion,
+                rospy.Time.now(),
+                "AMCL",  # Child frame
+                "map"  # Parent frame
+            )
+        rate.sleep()
+
 def main():
     # SETUP
     LIDAR_ANGLE = 240
@@ -326,6 +348,8 @@ def main():
 
     script_dir = os.path.dirname(os.path.realpath(__file__))
     file_path = os.path.join(script_dir, '../map_mashup.pgm')
+
+    global latest_position, latest_angle
 
     # Load map
     with Image.open(file_path) as img:
@@ -361,6 +385,13 @@ def main():
 
     # # Create a 4x4 subplot grid
     # fig, axes = plt.subplots(nrows=2, ncols=2, figsize=(4, 4))
+
+    # Create a TF broadcaster
+    tf_broadcaster = tf.TransformBroadcaster()
+
+    # Start the transformation sending thread
+    tf_thread = threading.Thread(target=send_tf_transformation, args=(tf_broadcaster, resolution))
+    tf_thread.start()
 
     a = 400
     while a:
@@ -448,18 +479,20 @@ def main():
         if jumps > 4:
             population.resample(pos_sigma, angle_sigma, elite_size, children_size)  #todo calculate children size on the fly, maybe add random particles?
 
-        quaternion = tf.transformations.quaternion_from_euler(
-            0, 0, particle_with_highest_weight.angle)
-        tf_broadcaster.sendTransform(
-            # Translation
-            (particle_with_highest_weight.position[0],
-             particle_with_highest_weight.position[1], 0),
-            quaternion,
-            rospy.Time.now(),
-            "AMCL",  # Child frame
-            "map"  # Parent frame
-        )
-        rospy.logfatal(a)
+        latest_position = copy.deepcopy(particle_with_highest_weight.position)
+        latest_angle = copy.deepcopy(particle_with_highest_weight.angle)
+
+        # quaternion = tf.transformations.quaternion_from_euler(
+        #     0, 0, particle_with_highest_weight.angle)
+        # tf_broadcaster.sendTransform(
+        #     # Translation
+        #     (particle_with_highest_weight.position[0]*resolution,
+        #      particle_with_highest_weight.position[1]*resolution, 0),
+        #     quaternion,
+        #     rospy.Time.now(),
+        #     "AMCL",  # Child frame
+        #     "map"  # Parent frame
+        # )
 
         # angles = [particle.angle for particle in population.particles]
         # x_vis = [particle.position[0] for particle in population.particles]
@@ -496,6 +529,7 @@ def main():
     # y_est = [sublist[1] for sublist in pos_est]
     # plt.plot(x_est, y_est)
     plt.show()
+    tf_thread.join()
 
 
 if __name__ == '__main__':

@@ -1,8 +1,8 @@
-# Install script for directory: /home/mrmat420/car4_autonomous/car4_ws/src/amcl
+# Install script for directory: /home/lattepanda/Matej_Pulec/car4_autonomous/car4_ws/src/amcl
 
 # Set the install prefix
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)
-  set(CMAKE_INSTALL_PREFIX "/home/mrmat420/car4_autonomous/car4_ws/install")
+  set(CMAKE_INSTALL_PREFIX "/home/lattepanda/Matej_Pulec/car4_autonomous/car4_ws/install")
 endif()
 string(REGEX REPLACE "/$" "" CMAKE_INSTALL_PREFIX "${CMAKE_INSTALL_PREFIX}")
 
@@ -38,17 +38,17 @@ if(NOT DEFINED CMAKE_CROSSCOMPILING)
 endif()
 
 if("x${CMAKE_INSTALL_COMPONENT}x" STREQUAL "xUnspecifiedx" OR NOT CMAKE_INSTALL_COMPONENT)
-  file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/lib/pkgconfig" TYPE FILE FILES "/home/mrmat420/car4_autonomous/car4_ws/build/amcl/catkin_generated/installspace/amcl.pc")
+  file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/lib/pkgconfig" TYPE FILE FILES "/home/lattepanda/Matej_Pulec/car4_autonomous/car4_ws/build/amcl/catkin_generated/installspace/amcl.pc")
 endif()
 
 if("x${CMAKE_INSTALL_COMPONENT}x" STREQUAL "xUnspecifiedx" OR NOT CMAKE_INSTALL_COMPONENT)
   file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/share/amcl/cmake" TYPE FILE FILES
-    "/home/mrmat420/car4_autonomous/car4_ws/build/amcl/catkin_generated/installspace/amclConfig.cmake"
-    "/home/mrmat420/car4_autonomous/car4_ws/build/amcl/catkin_generated/installspace/amclConfig-version.cmake"
+    "/home/lattepanda/Matej_Pulec/car4_autonomous/car4_ws/build/amcl/catkin_generated/installspace/amclConfig.cmake"
+    "/home/lattepanda/Matej_Pulec/car4_autonomous/car4_ws/build/amcl/catkin_generated/installspace/amclConfig-version.cmake"
     )
 endif()
 
 if("x${CMAKE_INSTALL_COMPONENT}x" STREQUAL "xUnspecifiedx" OR NOT CMAKE_INSTALL_COMPONENT)
-  file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/share/amcl" TYPE FILE FILES "/home/mrmat420/car4_autonomous/car4_ws/src/amcl/package.xml")
+  file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/share/amcl" TYPE FILE FILES "/home/lattepanda/Matej_Pulec/car4_autonomous/car4_ws/src/amcl/package.xml")
 endif()
 

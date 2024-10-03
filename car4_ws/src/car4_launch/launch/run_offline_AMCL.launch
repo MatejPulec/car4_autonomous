@@ -12,6 +12,8 @@
         <param name="hz" value="$(arg rate)" />
     </node>
 
+    <node pkg="amcl" type="position_estimator.py" name="position_estimator" />
+
     <node pkg="laser" type="laser_data_publisher.py" name="laser_data_publisher" />
 
     <node pkg="amcl" type="AMCL.py" name="AMCL" />

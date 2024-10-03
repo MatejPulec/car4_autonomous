@@ -3,9 +3,13 @@ import matplotlib.pyplot as plt
 import random
 import copy
 from PIL import Image
+import os
+
+# Get the directory where the script is located
+script_dir = os.path.dirname(os.path.abspath(__file__))
 
 # Load the map
-with Image.open("utilities/map_mashup.pgm") as img:
+with Image.open(os.path.join(script_dir, "map_mashup.pgm")) as img:
     map = np.array(img)
 
 y, x = np.where(map >= 250)
