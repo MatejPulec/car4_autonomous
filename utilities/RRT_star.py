@@ -5,7 +5,7 @@ import copy
 from PIL import Image
 
 # Load the map
-with Image.open("map_lifelong_HR (copy).pgm") as img:
+with Image.open("utilities/map_mashup.pgm") as img:
     map = np.array(img)
 
 y, x = np.where(map >= 250)
@@ -13,8 +13,8 @@ ok_position = list(zip(x, y))
 
 # Parameters
 map_size = (map.shape[0], map.shape[1])
-start = [250, 500]
-goal = [1600, 90]
+start = [114, 500]
+goal = [3072, 300]
 max_iterations = 5000
 step_size = 50
 search_radius = 20

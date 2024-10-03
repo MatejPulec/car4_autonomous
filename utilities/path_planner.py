@@ -5,19 +5,20 @@ import copy
 from PIL import Image
 
 # Parameters
-map_size = (600, 600)
-start = [500, 200]
-goal = [500, 350]
+start = [114, 500]
+goal = [200, 500]
 max_iterations = 5000
 step_size = 10
 goal_radius = 10
 search_radius = 20
 
 # Load the map
-with Image.open("map_lifelong_HR (copy).pgm") as img:
+with Image.open("utilities/map_mashup.pgm") as img:
     map_data = np.array(img)
 max_pos = [map_data.shape[1]-1, map_data.shape[0]-1]
 min_pos = [0, 0]
+
+map_size = (max_pos[0], max_pos[1])
 
 angle_range = (-np.pi, np.pi)
 y, x = np.where(map_data == 255)
