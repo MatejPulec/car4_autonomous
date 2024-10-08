@@ -1,0 +1,6 @@
+<?xml version="1.0"?>
+<launch>
+    
+    <node pkg="global_planner" type="goal_select.py" name="goal_select" />
+
+</launch>

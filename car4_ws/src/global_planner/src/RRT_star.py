@@ -1,9 +1,13 @@
+#!/usr/bin/env python3
+
 import numpy as np
 import matplotlib.pyplot as plt
 import random
 import copy
 from PIL import Image
 import os
+import rospy
+from geometry_msgs.msg import Point
 
 # Get the directory where the script is located
 script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -23,7 +27,7 @@ max_iterations = 10000
 step_size = 100
 final_step_size = 20
 exploration_bias = 0.75
-extra_search_time = 1.25
+extra_search_time = 0.05
 ball_radius_constant = 50000
 dimension = 2
 
@@ -48,6 +52,11 @@ def is_in_collision(node):
 
 def get_nearest_node(tree, random_node):
     return min(tree, key=lambda node: distance(node, random_node))
+
+def get_nearest_distance(tree, random_node):
+    nearest_node = min(tree, key=lambda node: distance(node, random_node))
+    return distance(nearest_node, random_node)
+
 
 def steer(from_node, to_node, extend_length=step_size):
     dist = distance(from_node, to_node)
@@ -211,6 +220,7 @@ def rrt_star(exploration_bias, extra_search_time):
     old_path = []
     tree = [Node(start[0], start[1])]
     final_node = Node(goal[0], goal[1])
+    final_iter = max_iterations
     for i in range(max_iterations):
         if random.random() < exploration_bias:
             random_node = final_node
@@ -218,58 +228,69 @@ def rrt_star(exploration_bias, extra_search_time):
             random_node = get_random_node()
         nearest_node = get_nearest_node(tree, random_node)
         new_node = steer(nearest_node, random_node)
-        new_node.parent = nearest_node
-        new_node.cost = nearest_node.cost + distance(new_node, nearest_node)
-        if new_node.x == final_node.x & new_node.y == final_node.y:
-            exploration_bias = 0
         if is_in_collision(new_node) or not is_collision_free(nearest_node, new_node):
             continue
+        new_node.parent = nearest_node
+        new_node.cost = nearest_node.cost + distance(new_node, nearest_node)
+        if new_node.x == final_node.x and new_node.y == final_node.y:
+            exploration_bias = 0
         rewire_radius = np.minimum(step_size, (ball_radius_constant * (np.log(i)/i))**(1/dimension))
-        # print(rewire_radius)
         nearby_nodes = get_nearby_nodes(tree, new_node, rewire_radius)
         new_node.parent = choose_parent(tree, nearby_nodes, new_node)
         tree.append(new_node)
         rewire(tree, nearby_nodes, new_node)
-        print(i)
-        if check_the_cost(tree) != 404:
-            final_iter = np.round(i * extra_search_time)
+        # print(get_nearest_distance(tree, final_node))
+        # print(i)
+        if check_the_cost(tree) != 404 and final_iter == max_iterations:
+            final_iter = np.round(i * (1+extra_search_time))
+
+        if i >= final_iter:
             return tree, None
     return tree, None
 
-tree, path = rrt_star(exploration_bias, extra_search_time)
+def goal_callback(msg):
+    global goal
+    goal = [msg.x, msg.y]  # Update global goal coordinates
+    rospy.loginfo(f"Goal coordinates updated: {goal}")
+    create_trajectory()  # Call the trajectory function when a new goal is received
 
-final_node = Node(goal[0], goal[1])
-nearby_nodes = get_nearby_nodes(tree, final_node, step_size)
-final_node.parent = choose_parent(tree, nearby_nodes, final_node)
-if final_node.parent is not None:
-    tree.append(final_node)
+def create_trajectory():
+    if goal is None:
+        return  # Ensure goal is set before attempting to calculate the trajectory
+    
+    tree, path = rrt_star(exploration_bias, extra_search_time)
+
+    final_node = Node(goal[0], goal[1])
+    nearby_nodes = get_nearby_nodes(tree, final_node, step_size)
+    final_node.parent = choose_parent(tree, nearby_nodes, final_node)
+    if final_node.parent is not None:
+        tree.append(final_node)
+
+    path = get_path(final_node)
+
+    path = interpolate_path(path, 5)
+
+    for _ in range(3):
+        path = smooth_out_path(path)
+        path = straighten_out_path(path)
+    
+    # Plot the results
+    path_x = [point[0] for point in path]
+    path_y = [point[1] for point in path]
+
+    plt.imshow(map)
+    plt.scatter(path_x, path_y)
+    plt.show()
+
+def main():
+    rospy.init_node('trajectory_planner', anonymous=True)
+    rospy.Subscriber('/goal_coordinates', Point, goal_callback)  # Subscribe to the goal coordinates topic
+    rospy.spin()  # Keep the node running
 
 
-points = []
 
-for _ in range (5000):
-    points.append(get_random_node())
-
-# x_coords = [node.x for node in points]
-# y_coords = [node.y for node in points]
-
-path = get_path(final_node)
-
-path = interpolate_path(path,5)
-
-for _ in range(10):
-    path = smooth_out_path(path)
-    path = straighten_out_path(path)
-
-
-
-        
-
-# Separate the coordinates for plotting
-path_x = [point[0] for point in path]
-path_y = [point[1] for point in path]
-
-plt.imshow(map)
-plt.scatter(path_x,path_y)
-plt.show()
-# plt.scatter(points[:][0],points[:][1])
+if __name__ == '__main__':
+    try:
+        main()
+    except rospy.ROSInterruptException:
+        pass
