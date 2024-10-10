@@ -7,7 +7,9 @@ import copy
 from PIL import Image
 import os
 import rospy
-from geometry_msgs.msg import Point
+from geometry_msgs.msg import Point, Point32, Polygon
+from nav_msgs.msg import Path
+from geometry_msgs.msg import PoseStamped
 
 # Get the directory where the script is located
 script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -24,17 +26,17 @@ map_size = (map.shape[0], map.shape[1])
 start = [114, 500]
 goal = [3072, 300]
 max_iterations = 10000
-step_size = 100
+step_size = 50
 final_step_size = 20
-exploration_bias = 0.75
+exploration_bias = 0.25
 extra_search_time = 0.05
 ball_radius_constant = 50000
 dimension = 2
 
 class Node:
     def __init__(self, x, y):
-        self.x = x
-        self.y = y
+        self.x = int(x)
+        self.y = int(y)
         self.parent = None
         self.cost = 0.0
 
@@ -46,7 +48,7 @@ def get_random_node():
     return Node(ok_position[idx][0], ok_position[idx][1])
 
 def is_in_collision(node):
-    if map[node.y, node.x] == 0:
+    if map[node.y, node.x] <= 240:
         return True
     return False
 
@@ -114,6 +116,9 @@ def bresenham(x1, y1, x2, y2):
 def get_nearby_nodes(tree, new_node, radius):
     return [node for node in tree if distance(node, new_node) <= radius]
 
+def get_available_nearby_nodes(tree, new_node, radius):
+    return [node for node in tree if distance(node, new_node) <= radius and is_collision_free(new_node, node) == True]
+
 def choose_parent(tree, nearby_nodes, new_node):
     if not nearby_nodes:
         return new_node.parent
@@ -144,10 +149,10 @@ def get_path(last_node):
 
 def check_the_cost(tree):
     final_node = Node(goal[0], goal[1])
-    nearby_nodes = get_nearby_nodes(tree, final_node, step_size)
-    if len(nearby_nodes) == 0:
+    available_nearby_nodes = get_available_nearby_nodes(tree, final_node, step_size)
+    if len(available_nearby_nodes) == 0:
         return 404
-    final_node.parent = choose_parent(tree, nearby_nodes, final_node)
+    final_node.parent = choose_parent(tree, available_nearby_nodes, final_node)
     return get_path(final_node)
 
 def check_coordinates_collision(coordinates, map):
@@ -242,6 +247,8 @@ def rrt_star(exploration_bias, extra_search_time):
         # print(get_nearest_distance(tree, final_node))
         # print(i)
         if check_the_cost(tree) != 404 and final_iter == max_iterations:
+            test=check_the_cost(tree)
+            print(test)
             final_iter = np.round(i * (1+extra_search_time))
 
         if i >= final_iter:
@@ -255,38 +262,63 @@ def goal_callback(msg):
     create_trajectory()  # Call the trajectory function when a new goal is received
 
 def create_trajectory():
-    if goal is None:
-        return  # Ensure goal is set before attempting to calculate the trajectory
-    
-    tree, path = rrt_star(exploration_bias, extra_search_time)
+    global path_pub
 
-    final_node = Node(goal[0], goal[1])
-    nearby_nodes = get_nearby_nodes(tree, final_node, step_size)
-    final_node.parent = choose_parent(tree, nearby_nodes, final_node)
+    if goal is None:
+        rospy.logwarn("Goal is not set. Cannot create a trajectory.")
+        return  # Exit if no goal is set
+
+    # Ensure path_pub is initialized
+    if path_pub is None:
+        rospy.logerr("Path publisher is not initialized!")
+        return
+
+    # Your trajectory planning logic (simplified for clarity)
+    tree, path = rrt_star(exploration_bias, extra_search_time)  # Example function
+    final_node = Node(goal[0], goal[1])  # Example final node from your planner
+    nearby_nodes = get_nearby_nodes(tree, final_node, step_size)  # Example
+    print(nearby_nodes)
+    final_node.parent = choose_parent(tree, nearby_nodes, final_node)  # Example
+
     if final_node.parent is not None:
         tree.append(final_node)
 
     path = get_path(final_node)
-
     path = interpolate_path(path, 5)
 
+    # Optional smoothing/straightening
     for _ in range(3):
         path = smooth_out_path(path)
         path = straighten_out_path(path)
-    
-    # Plot the results
-    path_x = [point[0] for point in path]
-    path_y = [point[1] for point in path]
 
-    plt.imshow(map)
-    plt.scatter(path_x, path_y)
-    plt.show()
+    # Convert path to a Polygon message (array of Point32)
+    polygon_msg = Polygon()
+    
+    for point in path:
+        pt = Point32()
+        pt.x = point[0]
+        pt.y = point[1]
+        pt.z = 0  # Assuming a 2D plane, z is set to 0
+        polygon_msg.points.append(pt)
+
+    # Publish the points array
+    rospy.loginfo("Publishing path with %d points", len(polygon_msg.points))
+    path_pub.publish(polygon_msg)
 
 def main():
-    rospy.init_node('trajectory_planner', anonymous=True)
-    rospy.Subscriber('/goal_coordinates', Point, goal_callback)  # Subscribe to the goal coordinates topic
-    rospy.spin()  # Keep the node running
+    global path_pub  # Declare the global publisher variable
 
+    rospy.init_node('trajectory_planner', anonymous=True)
+
+    # Create the path publisher
+    path_pub = rospy.Publisher('/path', Polygon, queue_size=10)
+    rospy.loginfo("Path publisher initialized.")
+
+    # Subscribe to the goal coordinates topic
+    rospy.Subscriber('/goal_coordinates', Point, goal_callback)
+    rospy.loginfo("Subscribed to /goal_coordinates topic.")
+
+    rospy.spin()  # Keep the node running
 
 
 if __name__ == '__main__':
