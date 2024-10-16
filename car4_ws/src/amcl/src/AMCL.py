@@ -393,9 +393,7 @@ def main():
     tf_thread = threading.Thread(target=send_tf_transformation, args=(tf_broadcaster, resolution))
     tf_thread.start()
 
-    a = 400
-    while a:
-        a -= 1
+    while 1:
         old_car4_odom_state = car4_odom_state
 
         odometry_msg = rospy.wait_for_message('odometry_data', CarState)
@@ -528,7 +526,7 @@ def main():
     # x_est = [sublist[0] for sublist in pos_est]
     # y_est = [sublist[1] for sublist in pos_est]
     # plt.plot(x_est, y_est)
-    plt.show()
+    # plt.show()
     tf_thread.join()
 
 

@@ -1,18 +1,84 @@
+#!/usr/bin/env python3
+import rospy
+import tf2_ros
+from geometry_msgs.msg import Polygon
+from nav_msgs.msg import Path
+from tf2_geometry_msgs import PoseStamped
+import threading
 import serial
 import time
 import struct
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
-from hokuyo.driver import hokuyo
-from hokuyo.tools import serial_port
 import sys
 import signal
 import os
 import re
 import threading
 import multiprocessing
+import tf
 
+rospy.init_node("global_driver")
+
+# Initialize global variables
+path = None  # Global variable for the path (Polygon type)
+position = None  # Global variable for the transformation from map to base_link
+tf_listener = tf.TransformListener()
+lookforward_distance = 2 #[m]
+point_to_follow = None
+
+def path_callback(msg):
+    """
+    Callback function for receiving the path.
+    It updates the global 'path' variable.
+    """
+    global path
+    path = []
+    for point in msg.points:
+        path.insert(0, point)
+    rospy.loginfo("Received new path data.")
+
+def update_tf():
+    """
+    Function to continuously listen to the transformation between 'map' and 'base_link'.
+    Runs in a separate thread and updates the global 'tf_map_to_base' variable.
+    """
+    global lookforward_distance
+    global position
+    global point_to_follow
+    rate = rospy.Rate(10)  # Update tf 10 times per second (10 Hz)
+    
+    while not rospy.is_shutdown():
+        try:
+            # Get the latest transform between 'map' and 'base_link'
+            tf_listener.waitForTransform("map", "base_link", rospy.Time(0), rospy.Duration(1.0))
+            (translation, quaternion) = tf_listener.lookupTransform("map", "base_link", rospy.Time(0))
+            position = [translation[0], translation[1]]
+
+        except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException):
+            rospy.logwarn("Failed to lookup transformations")
+        
+        if path != None and position != None:
+            min_distance = np.inf
+            for point in path:
+                distance = np.linalg.norm([point.x - position[0], point.y - position[1]])
+                
+                # Check if the point is beyond the lookforward distance
+                if distance <= lookforward_distance:
+                    point_to_follow = point
+                    break
+                else:
+                    # Find the closest point
+                    if distance < min_distance:
+                        min_distance = distance
+                        point_to_follow = point
+        
+        if point_to_follow != None:
+            print(point_to_follow.x/0.025, point_to_follow.y/0.025*-1)
+
+            
+        rate.sleep()
 
 def setting_serial_PC_PIC():
     # Configure the serial port to SEND data
@@ -60,91 +126,31 @@ def prepare_data_to_PIC33(data_to_send):
     return packed_data
 
 
-def new_file_name(os,re,directory):
-    # List all files in the directory
-    files = os.listdir(directory)
+# # Serial connection setting
+# ser_ftdi = setting_serial_PC_PIC()
 
-    # Filter files that match the desired pattern
-    pattern = r'recorded_data_CAR_(\d+)\.npy'
-    matching_files = [f for f in files if re.match(pattern, f)]
-
-    # If there are no matching files, start numbering from 1
-    if len(matching_files) == 0:
-        highest_number = 0
-    else:
-        # Extract numbers from filenames and find the highest one
-        numbers = [int(re.match(pattern, f).group(1)) for f in matching_files]
-        highest_number = max(numbers)
-
-    # Increment the highest number
-    new_number = highest_number + 1
-    return new_number
-
-def stop_the_car(ser_ftdi,stop_data):
-    for i in range(40):
-        packed_data = prepare_data_to_PIC33(stop_data)
-        ser_ftdi.write(packed_data)
-        time.sleep(0.001)
+# # Calculate the delay in seconds for a frequency of 1000 Hz
+# delay = 1 / 1000  # 1 millisecond delay 
 
 
-def handle_interrupt(signal, frame):
-    # Interrupt to break the loop with Ctrl+C and saving the data    
-    global data_laser_saving
-    global data
-    global filename_LiDar
-    global filename_CAR4
-
-    # print(" pressed. Turning LiDar off and Exiting...")
-    # laser.laser_off()   
-    
-    # # Save the data   
-    # np.save(filename_LiDar, data_laser_saving)
-    # np.save(filename_CAR4, data)
-    # print("Data saved")
-
-    # Add your code to handle the interrupt here
-    sys.exit(0)
-
-# Register the signal handler
-signal.signal(signal.SIGINT, handle_interrupt)
+# start_time = time.monotonic()
 
 
-count = 1200
-data = np.zeros((count, 15), dtype=float)
+# #ser_ftdi.reset_input_buffer()
+# time.sleep(0.001)
+# # Main function
 
-########################################3
-script_dir = os.path.dirname(os.path.abspath(__file__))
-new_number = new_file_name(os,re,script_dir)
+if __name__ == "__main__":
+    try:
+        # Create a subscriber for the Polygon path topic
+        rospy.Subscriber("/path", Polygon, path_callback)
 
-# Serial connection setting
-ser_ftdi = setting_serial_PC_PIC()
+        # Start a separate thread for updating the transform (tf)
+        tf_thread = threading.Thread(target=update_tf)
+        tf_thread.start()
 
-# Calculate the delay in seconds for a frequency of 1000 Hz
-delay = 1 / 1000  # 1 millisecond delay 
+        # Keep the node running
+        rospy.spin()
 
-
-start_time = time.monotonic()
-
-
-#ser_ftdi.reset_input_buffer()
-time.sleep(0.001)
-# Main function
-if __name__=="__main__":
-    ######################################################################
-
-    print("START of driving")
-    print("Press Ctrl+c to exit and save")
-    # MAIN LOOP
-    while 1:
-        
-        # Send data to CAR4        
-        vector_to_send = [99, 0, 127, 127, 0]
- 
-     
-        packed_data = prepare_data_to_PIC33(vector_to_send)
-        ser_ftdi.write(packed_data)
-
-
-        time.sleep(delay)
-
-    #####################################################################
+    except rospy.ROSInterruptException:
+        pass

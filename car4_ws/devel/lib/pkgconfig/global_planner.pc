@@ -1,0 +1,8 @@
+prefix=/home/mrmat420/car4_autonomous/car4_ws/devel
+
+Name: global_planner
+Description: Description of global_planner
+Version: 0.0.0
+Cflags: 
+Libs: -L${prefix}/lib 
+Requires: 

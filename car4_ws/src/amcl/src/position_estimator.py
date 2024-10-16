@@ -2,6 +2,7 @@
 import rospy
 import tf
 import tf.transformations
+import numpy as np
 
 # Initialize the TF broadcaster and listener
 rospy.init_node('position_estimator', anonymous=True)
@@ -42,14 +43,14 @@ def broadcast_map_to_odom():
 
             # Step 3: Compute the map -> odom transformation
             # Translation difference: map_to_odom_translation = map_to_base_translation - odom_to_base_translation
+            map_to_odom_yaw = map_to_AMCL_yaw - odom_to_base_yaw
             map_to_odom_translation = (
-                map_to_AMCL_translation[0] - odom_to_base_translation[0],
-                map_to_AMCL_translation[1] - odom_to_base_translation[1],
+                map_to_AMCL_translation[0] - (odom_to_base_translation[0]*np.cos(-map_to_odom_yaw) + odom_to_base_translation[1]*np.sin(-map_to_odom_yaw)),
+                map_to_AMCL_translation[1] - (odom_to_base_translation[1]*np.cos(-map_to_odom_yaw) - odom_to_base_translation[0]*np.sin(-map_to_odom_yaw)),
                 0  # Assuming 2D
             )
 
             # Rotation difference: map_to_odom_yaw = map_to_base_yaw - odom_to_base_yaw
-            map_to_odom_yaw = map_to_AMCL_yaw - odom_to_base_yaw
             map_to_odom_quaternion = tf.transformations.quaternion_from_euler(0, 0, map_to_odom_yaw)
 
             # Step 4: Broadcast the transformation from map to odom

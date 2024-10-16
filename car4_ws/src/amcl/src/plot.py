@@ -32,7 +32,9 @@ def plot_positions_on_map():
         # Convert to pixel coordinates and invert the Y-axis
         plt.plot(np.array(x_positions) / 0.025, -np.array(y_positions) / 0.025, 'ro')  # Plot positions as red dots
     plt.title('Robot Positions (map -> base_link)')
-    plt.show(block=True)  # Show the plot and block execution until the window is closed
+    plt.draw()
+    plt.show(block=False)  # Show the plot and block execution until the window is closed
+    plt.pause(1)
 
 
 # Signal handler for termination

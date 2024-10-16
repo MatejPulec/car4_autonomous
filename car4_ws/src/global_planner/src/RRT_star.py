@@ -10,6 +10,8 @@ import rospy
 from geometry_msgs.msg import Point, Point32, Polygon
 from nav_msgs.msg import Path
 from geometry_msgs.msg import PoseStamped
+import tf
+
 
 # Get the directory where the script is located
 script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -35,8 +37,8 @@ dimension = 2
 
 class Node:
     def __init__(self, x, y):
-        self.x = int(x)
-        self.y = int(y)
+        self.x = int(np.round(x))
+        self.y = int(np.round(y))
         self.parent = None
         self.cost = 0.0
 
@@ -119,6 +121,9 @@ def get_nearby_nodes(tree, new_node, radius):
 def get_available_nearby_nodes(tree, new_node, radius):
     return [node for node in tree if distance(node, new_node) <= radius and is_collision_free(new_node, node) == True]
 
+def get_available_nodes(tree, new_node, radius):
+    return [node for node in tree if is_collision_free(new_node, node) == True]
+
 def choose_parent(tree, nearby_nodes, new_node):
     if not nearby_nodes:
         return new_node.parent
@@ -149,10 +154,10 @@ def get_path(last_node):
 
 def check_the_cost(tree):
     final_node = Node(goal[0], goal[1])
-    available_nearby_nodes = get_available_nearby_nodes(tree, final_node, step_size)
-    if len(available_nearby_nodes) == 0:
+    available_nodes = get_available_nodes(tree, final_node, step_size)
+    if len(available_nodes) == 0:
         return 404
-    final_node.parent = choose_parent(tree, available_nearby_nodes, final_node)
+    final_node.parent = choose_parent(tree, available_nodes, final_node)
     return get_path(final_node)
 
 def check_coordinates_collision(coordinates, map):
@@ -198,23 +203,53 @@ def straighten_out_path(path):
             index_end = last_point_idx
     return path
 
-def interpolate_path(path, n):
-    new_path = []
+# def interpolate_path(path, n):
+#     new_path = []
     
+#     for i in range(len(path) - 1):
+#         # Get the start and end points
+#         x_start, y_start = path[i]
+#         x_end, y_end = path[i + 1]
+        
+#         # Generate n points, including the start and end points
+#         for t in np.linspace(0, 1, n):
+#             x_interp = x_start + t * (x_end - x_start)
+#             y_interp = y_start + t * (y_end - y_start)
+            
+#             # Round the interpolated points to the nearest integer (optional, depending on application)
+#             new_path.append([round(x_interp), round(y_interp)])
+    
+#     # Add the last point of the original path, since the loop only adds intermediate points
+#     new_path.append(path[-1])
+    
+#     return new_path
+
+def interpolate_path(path, max_distance):
+    new_path = []
+
     for i in range(len(path) - 1):
         # Get the start and end points
         x_start, y_start = path[i]
         x_end, y_end = path[i + 1]
         
-        # Generate n points, including the start and end points
-        for t in np.linspace(0, 1, n):
-            x_interp = x_start + t * (x_end - x_start)
-            y_interp = y_start + t * (y_end - y_start)
-            
-            # Round the interpolated points to the nearest integer (optional, depending on application)
-            new_path.append([round(x_interp), round(y_interp)])
+        # Calculate the Euclidean distance between the points
+        distance = np.sqrt((x_end - x_start) ** 2 + (y_end - y_start) ** 2)
+        
+        # Add the start point
+        new_path.append([x_start, y_start])
+
+        # If the distance is greater than the max_distance, interpolate
+        if distance > max_distance:
+            # Determine how many points to insert based on the distance and max_distance
+            num_points = int(np.ceil(distance / max_distance))
+
+            # Generate intermediate points
+            for t in np.linspace(0, 1, num_points, endpoint=False)[1:]:
+                x_interp = x_start + t * (x_end - x_start)
+                y_interp = y_start + t * (y_end - y_start)
+                new_path.append([round(x_interp), round(y_interp)])
     
-    # Add the last point of the original path, since the loop only adds intermediate points
+    # Add the last point of the original path
     new_path.append(path[-1])
     
     return new_path
@@ -223,7 +258,9 @@ def interpolate_path(path, n):
 
 def rrt_star(exploration_bias, extra_search_time):
     old_path = []
-    tree = [Node(start[0], start[1])]
+    (translation, quaternion) = tf_listener.lookupTransform("map", "base_link", rospy.Time(0))
+    tree = [Node(translation[0]/0.025, translation[1]/0.025*-1)]
+    rospy.logwarn(tree[0])
     final_node = Node(goal[0], goal[1])
     final_iter = max_iterations
     for i in range(max_iterations):
@@ -246,10 +283,9 @@ def rrt_star(exploration_bias, extra_search_time):
         rewire(tree, nearby_nodes, new_node)
         # print(get_nearest_distance(tree, final_node))
         # print(i)
-        if check_the_cost(tree) != 404 and final_iter == max_iterations:
-            test=check_the_cost(tree)
-            print(test)
-            final_iter = np.round(i * (1+extra_search_time))
+        if i % 50 == 0:
+            if check_the_cost(tree) != 404 and final_iter == max_iterations:
+                final_iter = np.round(i * (1+extra_search_time))
 
         if i >= final_iter:
             return tree, None
@@ -276,15 +312,14 @@ def create_trajectory():
     # Your trajectory planning logic (simplified for clarity)
     tree, path = rrt_star(exploration_bias, extra_search_time)  # Example function
     final_node = Node(goal[0], goal[1])  # Example final node from your planner
-    nearby_nodes = get_nearby_nodes(tree, final_node, step_size)  # Example
-    print(nearby_nodes)
-    final_node.parent = choose_parent(tree, nearby_nodes, final_node)  # Example
+    available_nodes = get_available_nodes(tree, final_node, step_size)  # Example
+    final_node.parent = choose_parent(tree, available_nodes, final_node)  # Example
 
     if final_node.parent is not None:
         tree.append(final_node)
 
     path = get_path(final_node)
-    path = interpolate_path(path, 5)
+    path = interpolate_path(path, 20)
 
     # Optional smoothing/straightening
     for _ in range(3):
@@ -296,8 +331,8 @@ def create_trajectory():
     
     for point in path:
         pt = Point32()
-        pt.x = point[0]
-        pt.y = point[1]
+        pt.x = point[0]*0.025
+        pt.y = point[1]*0.025*-1
         pt.z = 0  # Assuming a 2D plane, z is set to 0
         polygon_msg.points.append(pt)
 
@@ -307,8 +342,11 @@ def create_trajectory():
 
 def main():
     global path_pub  # Declare the global publisher variable
+    global tf_listener
 
     rospy.init_node('trajectory_planner', anonymous=True)
+
+    tf_listener = tf.TransformListener()
 
     # Create the path publisher
     path_pub = rospy.Publisher('/path', Polygon, queue_size=10)

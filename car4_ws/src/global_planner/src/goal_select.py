@@ -7,10 +7,13 @@ from PIL import Image
 import os
 import numpy as np
 import time
+import threading  # For running the timed function in a background thread
+import tf
+
+# tf_listener = tf.TransformListener()
 
 pub = None
 drawing = 0
-# path_x, path_y = [], []  # Store the path coordinates
 
 def publish_coordinates(x, y):
     point = Point()
@@ -20,31 +23,23 @@ def publish_coordinates(x, y):
     pub.publish(point)
 
 def path_callback(msg):
-
     path_x = []
     path_y = []
 
-    time.sleep(0.5)
-
-    # Log how many points we received
-    rospy.logwarn(f"Received path with {len(msg.points)} points.")
+    time.sleep(0.001)
 
     # Extract the coordinates from the Polygon message
-    path_x = [point.x for point in msg.points]
-    path_y = [point.y for point in msg.points]
-
-    # Log the extracted coordinates
-    rospy.logwarn(f"Extracted coordinates: {list(zip(path_x, path_y))}")
+    path_x = [point.x/0.025 for point in msg.points]
+    path_y = [point.y/0.025*-1 for point in msg.points]
 
     if path_x and path_y:
         # Plot the updated path
-        plt.gca().plot(path_x, path_y, marker='o', linestyle='-', color='b')
+        trajectory.set_data(path_x, path_y)
+        ax.draw_artist(trajectory)
         plt.draw()
-        rospy.loginfo("Path has been plotted.")
-    else:
-        rospy.logwarn("No points to plot.")
+        plt.show(block=False)
 
-def onclick(event, ax, pgm_image):
+def onclick(event, ax):
     x, y = event.xdata, event.ydata
     if x is not None and y is not None:
         x = np.round(x)
@@ -52,25 +47,40 @@ def onclick(event, ax, pgm_image):
 
         publish_coordinates(x, y)
 
-        # Clear the plot and redraw the map
-        ax.clear()
-        ax.imshow(pgm_image, cmap='gray')
-
-        # Mark the clicked point
-        ax.plot(x, y, 'ro')
-
-        # Redraw the path, if available
-        # if path_x and path_y:
-        #     ax.plot(path_x, path_y, marker='o', linestyle='-', color='b')
+        goal.set_data(x, y)
+        ax.draw_artist(goal)
         
         plt.draw()
         plt.show(block=False)
 
+def update_pos():
+    while not rospy.is_shutdown():
+        time.sleep(1)  # Run this function every second
+        tf_listener.waitForTransform("map", "base_link", rospy.Time(0), rospy.Duration(1.0))
+        (translation, quaternion) = tf_listener.lookupTransform("map", "base_link", rospy.Time(0))
+        x = translation[0]/0.025
+        y = translation[1]/0.025 * -1
+        if x is not None and y is not None:
+            x = np.round(x)
+            y = np.round(y)
+
+            pos.set_data(x, y)
+            ax.draw_artist(pos)
+
+            plt.draw()
+            plt.show(block=False)
+
 def main():
     global pub
+    global goal
+    global pos
+    global trajectory
+    global ax
+    global tf_listener
 
     rospy.init_node('goal_coordinate_publisher', anonymous=True)
     pub = rospy.Publisher('/goal_coordinates', Point, queue_size=10)
+    tf_listener = tf.TransformListener()
 
     # Subscribe to the path topic
     rospy.Subscriber('/path', Polygon, path_callback)
@@ -81,9 +91,17 @@ def main():
 
     fig, ax = plt.subplots()
     ax.imshow(pgm_image, cmap='gray')
+    goal, = ax.plot([], [], 'ro')
+    pos, = ax.plot([], [], 'go')
+    trajectory, = ax.plot([], [], 'bo')
 
     # Capture mouse clicks to send goal coordinates
-    cid = fig.canvas.mpl_connect('button_press_event', lambda event: onclick(event, ax, pgm_image))
+    cid = fig.canvas.mpl_connect('button_press_event', lambda event: onclick(event, ax))
+
+    # Start the update_pos function in a background thread
+    pos_thread = threading.Thread(target=update_pos)
+    pos_thread.daemon = True  # Make sure the thread exits when the main program exits
+    pos_thread.start()
 
     # Spin in a separate thread while keeping the plot interactive
     plt.show()  # Non-blocking to allow ROS callbacks to work
