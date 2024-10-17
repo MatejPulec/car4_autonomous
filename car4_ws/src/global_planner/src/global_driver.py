@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import rospy
+import tf.transformations
 import tf2_ros
 from geometry_msgs.msg import Polygon
 from nav_msgs.msg import Path
@@ -47,6 +48,7 @@ def update_tf():
     global lookforward_distance
     global position
     global point_to_follow
+    global ser_ftdi
     rate = rospy.Rate(10)  # Update tf 10 times per second (10 Hz)
     
     while not rospy.is_shutdown():
@@ -55,6 +57,8 @@ def update_tf():
             tf_listener.waitForTransform("map", "base_link", rospy.Time(0), rospy.Duration(1.0))
             (translation, quaternion) = tf_listener.lookupTransform("map", "base_link", rospy.Time(0))
             position = [translation[0], translation[1]]
+            euler_angles = tf.transformations.euler_from_quaternion(quaternion)
+            angle = euler_angles[2]
 
         except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException):
             rospy.logwarn("Failed to lookup transformations")
@@ -74,9 +78,35 @@ def update_tf():
                         min_distance = distance
                         point_to_follow = point
         
-        if point_to_follow != None:
-            print(point_to_follow.x/0.025, point_to_follow.y/0.025*-1)
+        # vector_to_send = [99, 0, 254, 127, 0]
+        # packed_data = prepare_data_to_PIC33(vector_to_send)
+        # ser_ftdi.write(packed_data)
+            
 
+        if point_to_follow != None:
+            turning_angle = np.arctan2(point_to_follow.y - position[1], point_to_follow.x - position[0]) - angle
+            if turning_angle > np.pi:
+                turning_angle = turning_angle - 2 * np.pi
+            if turning_angle < -np.pi:
+                turning_angle = turning_angle + 2 * np.pi
+            # [control_data["PC"], control_data["MODE"],control_data["DIR"], control_data["SPEED"], control_data["MODESTEERING"]]
+            if np.abs(turning_angle) <= 1.6:
+                speed = 127+30
+                dir = int(np.clip(127 - 200 * turning_angle, 1, 254))
+            else:
+                speed = 127-30
+                if turning_angle > 0:
+                    dir = 254
+                else:
+                    dir = 1
+            vector_to_send = [99, 0, dir, speed, 0]
+            rospy.logwarn("turning angle" + str(turning_angle))
+            rospy.logwarn("car_angle" + str(angle))
+            rospy.logwarn("point angle" + str(np.arctan2(point.y - position[1], point.x - position[0])))
+            rospy.logwarn(vector_to_send)
+            packed_data = prepare_data_to_PIC33(vector_to_send)
+            ser_ftdi.write(packed_data)
+            
             
         rate.sleep()
 
@@ -142,6 +172,8 @@ def prepare_data_to_PIC33(data_to_send):
 
 if __name__ == "__main__":
     try:
+
+        ser_ftdi = setting_serial_PC_PIC()
         # Create a subscriber for the Polygon path topic
         rospy.Subscriber("/path", Polygon, path_callback)
 

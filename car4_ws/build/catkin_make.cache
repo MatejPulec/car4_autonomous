@@ -1,2 +1,2 @@
 amcl:car4_launch:global_planner:laser:odometry:slam
--DCATKIN_DEVEL_PREFIX=/home/mrmat420/car4_autonomous/car4_ws/devel -DCMAKE_INSTALL_PREFIX=/home/mrmat420/car4_autonomous/car4_ws/install -G Unix Makefiles
+-DCATKIN_DEVEL_PREFIX=/home/lattepanda/Matej_Pulec/car4_autonomous/car4_ws/devel -DCMAKE_INSTALL_PREFIX=/home/lattepanda/Matej_Pulec/car4_autonomous/car4_ws/install -G Unix Makefiles
