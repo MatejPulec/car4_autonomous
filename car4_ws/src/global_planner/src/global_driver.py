@@ -19,6 +19,7 @@ import re
 import threading
 import multiprocessing
 import tf
+import signal
 
 rospy.init_node("global_driver")
 
@@ -28,6 +29,7 @@ position = None  # Global variable for the transformation from map to base_link
 tf_listener = tf.TransformListener()
 lookforward_distance = 2 #[m]
 point_to_follow = None
+
 
 def path_callback(msg):
     """
@@ -100,12 +102,14 @@ def update_tf():
                 else:
                     dir = 1
             vector_to_send = [99, 0, dir, speed, 0]
-            rospy.logwarn("turning angle" + str(turning_angle))
-            rospy.logwarn("car_angle" + str(angle))
-            rospy.logwarn("point angle" + str(np.arctan2(point.y - position[1], point.x - position[0])))
-            rospy.logwarn(vector_to_send)
             packed_data = prepare_data_to_PIC33(vector_to_send)
             ser_ftdi.write(packed_data)
+        
+        else:
+            vector_to_send = [0, 0, 127, 127, 0]
+            packed_data = prepare_data_to_PIC33(vector_to_send)
+            ser_ftdi.write(packed_data)
+
             
             
         rate.sleep()
@@ -155,6 +159,26 @@ def prepare_data_to_PIC33(data_to_send):
 
     return packed_data
 
+def handle_interrupt(sig, frame):
+    """
+    Signal handler for Ctrl+C interrupt.
+    Sends stop command and closes serial connection.
+    """
+    global ser_ftdi
+
+    # Send stop signal to the PIC33
+    vector_to_send = [0, 0, 127, 127, 0]
+    packed_data = prepare_data_to_PIC33(vector_to_send)
+    ser_ftdi.write(packed_data)
+
+    rospy.logwarn("Switched back to manual, terminating...")
+    
+    # Close the serial connection if open
+    if ser_ftdi.is_open:
+        ser_ftdi.close()
+    
+    sys.exit(0)
+
 
 # # Serial connection setting
 # ser_ftdi = setting_serial_PC_PIC()
@@ -172,7 +196,7 @@ def prepare_data_to_PIC33(data_to_send):
 
 if __name__ == "__main__":
     try:
-
+        signal.signal(signal.SIGINT, handle_interrupt)
         ser_ftdi = setting_serial_PC_PIC()
         # Create a subscriber for the Polygon path topic
         rospy.Subscriber("/path", Polygon, path_callback)

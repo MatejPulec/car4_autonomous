@@ -67,6 +67,9 @@ class Particle:
                      dy*np.random.normal(1, proportional_error, 1)[0]])
         self.position += np.dot(A, B) / resolution
 
+        self.position[0] = np.round(self.position[0])
+        self.position[1] = np.round(self.position[1])
+
         if self.position[0] > max_pos[0]:
             self.position[0] = max_pos[0]
 
@@ -122,6 +125,9 @@ class Population:
     def __init__(self, pop_size, position, angle, choose_randomly):
         self.particles = [Particle(
             angle, position, choose_randomly=choose_randomly) for _ in range(pop_size)]
+        
+    def check_position(self, map):
+        self.particles = [particle for particle in self.particles if map[int(particle.position[1]), int(particle.position[0])] == 255]
 
     def sort(self):
         self.particles = sorted(
@@ -383,8 +389,11 @@ def main():
     pos_est = []
     pos_real = []
 
-    # # Create a 4x4 subplot grid
-    # fig, axes = plt.subplots(nrows=2, ncols=2, figsize=(4, 4))
+    plot = 0
+
+    if plot:
+        # Create a 4x4 subplot grid
+        fig, axes = plt.subplots(nrows=2, ncols=2, figsize=(4, 4))
 
     # Create a TF broadcaster
     tf_broadcaster = tf.TransformBroadcaster()
@@ -429,6 +438,7 @@ def main():
 
         population.move(dx_local, dy_local, car4_odom_da,
                         max_pos, min_pos, resolution, proportional_error)
+        population.check_position(map)
         population.update_scan_values(
             map, resolution, LIDAR_NUMBER_OF_POINTS, LIDAR_ANGLE, no_zeros)
         population.calculate_weights(X, Y)  # todo use position error
@@ -438,27 +448,27 @@ def main():
         # plt.scatter(population.particles[0].X, population.particles[0].Y)
         # plt.show()
 
+        if plot:
+            # Example data
+            particles_to_plot = min(4, len(population.particles))
+            X_particle = [particle.X for particle in population.particles[:particles_to_plot]]
+            Y_particle = [particle.Y for particle in population.particles[:particles_to_plot]]
+            Weight_particle = [particle.weight for particle in population.particles[:particles_to_plot]]
 
-        # # Example data
-        # particles_to_plot = min(4, len(population.particles))
-        # X_particle = [particle.X for particle in population.particles[:particles_to_plot]]
-        # Y_particle = [particle.Y for particle in population.particles[:particles_to_plot]]
-        # Weight_particle = [particle.weight for particle in population.particles[:particles_to_plot]]
+            # Iterate over the first particles_to_plot particles and plot them in the subplots
+            for i, ax in enumerate(axes.flat):
+                if i < particles_to_plot:
+                    ax.clear()
+                    ax.scatter(X, Y)
+                    ax.scatter(X_particle[i], Y_particle[i])
+                    ax.set_title(f'Particle {i + 1}\nWeight: {Weight_particle[i]:.4f}\nJumps: {jumps}')
+                    ax.axis('equal')
 
-        # # Iterate over the first particles_to_plot particles and plot them in the subplots
-        # for i, ax in enumerate(axes.flat):
-        #     if i < particles_to_plot:
-        #         ax.clear()
-        #         ax.scatter(X, Y)
-        #         ax.scatter(X_particle[i], Y_particle[i])
-        #         ax.set_title(f'Particle {i + 1}\nWeight: {Weight_particle[i]:.4f}\nJumps: {jumps}')
-        #         ax.axis('equal')
+            # Adjust layout to prevent clipping of titles
+            plt.tight_layout()
 
-        # # Adjust layout to prevent clipping of titles
-        # plt.tight_layout()
-
-        # # Show the plot
-        # plt.pause(0.1)
+            # Show the plot
+            plt.pause(0.1)
 
         
         # x_est = [sublist[0] for sublist in pos_est]
