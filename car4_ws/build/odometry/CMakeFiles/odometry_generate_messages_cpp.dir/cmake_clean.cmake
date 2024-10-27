@@ -1,5 +1,5 @@
 file(REMOVE_RECURSE
-  "/home/lattepanda/Matej_Pulec/car4_autonomous/car4_ws/devel/include/odometry/CarState.h"
+  "/home/mrmat420/car4_autonomous/car4_ws/devel/include/odometry/CarState.h"
   "CMakeFiles/odometry_generate_messages_cpp"
 )
 

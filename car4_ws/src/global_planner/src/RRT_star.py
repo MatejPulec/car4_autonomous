@@ -260,7 +260,6 @@ def rrt_star(exploration_bias, extra_search_time):
     old_path = []
     (translation, quaternion) = tf_listener.lookupTransform("map", "base_link", rospy.Time(0))
     tree = [Node(translation[0]/0.025, translation[1]/0.025*-1)]
-    rospy.logwarn(tree[0])
     final_node = Node(goal[0], goal[1])
     final_iter = max_iterations
     for i in range(max_iterations):
@@ -276,7 +275,7 @@ def rrt_star(exploration_bias, extra_search_time):
         new_node.cost = nearest_node.cost + distance(new_node, nearest_node)
         if new_node.x == final_node.x and new_node.y == final_node.y:
             exploration_bias = 0
-        rewire_radius = np.minimum(step_size, (ball_radius_constant * (np.log(i)/i))**(1/dimension))
+        rewire_radius = np.minimum(step_size, (ball_radius_constant * (np.log(i+1)/i+1))**(1/dimension))
         nearby_nodes = get_nearby_nodes(tree, new_node, rewire_radius)
         new_node.parent = choose_parent(tree, nearby_nodes, new_node)
         tree.append(new_node)

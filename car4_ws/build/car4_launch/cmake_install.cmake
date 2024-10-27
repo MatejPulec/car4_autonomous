@@ -1,8 +1,8 @@
-# Install script for directory: /home/lattepanda/Matej_Pulec/car4_autonomous/car4_ws/src/car4_launch
+# Install script for directory: /home/mrmat420/car4_autonomous/car4_ws/src/car4_launch
 
 # Set the install prefix
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)
-  set(CMAKE_INSTALL_PREFIX "/home/lattepanda/Matej_Pulec/car4_autonomous/car4_ws/install")
+  set(CMAKE_INSTALL_PREFIX "/home/mrmat420/car4_autonomous/car4_ws/install")
 endif()
 string(REGEX REPLACE "/$" "" CMAKE_INSTALL_PREFIX "${CMAKE_INSTALL_PREFIX}")
 
@@ -38,17 +38,17 @@ if(NOT DEFINED CMAKE_CROSSCOMPILING)
 endif()
 
 if("x${CMAKE_INSTALL_COMPONENT}x" STREQUAL "xUnspecifiedx" OR NOT CMAKE_INSTALL_COMPONENT)
-  file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/lib/pkgconfig" TYPE FILE FILES "/home/lattepanda/Matej_Pulec/car4_autonomous/car4_ws/build/car4_launch/catkin_generated/installspace/car4_launch.pc")
+  file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/lib/pkgconfig" TYPE FILE FILES "/home/mrmat420/car4_autonomous/car4_ws/build/car4_launch/catkin_generated/installspace/car4_launch.pc")
 endif()
 
 if("x${CMAKE_INSTALL_COMPONENT}x" STREQUAL "xUnspecifiedx" OR NOT CMAKE_INSTALL_COMPONENT)
   file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/share/car4_launch/cmake" TYPE FILE FILES
-    "/home/lattepanda/Matej_Pulec/car4_autonomous/car4_ws/build/car4_launch/catkin_generated/installspace/car4_launchConfig.cmake"
-    "/home/lattepanda/Matej_Pulec/car4_autonomous/car4_ws/build/car4_launch/catkin_generated/installspace/car4_launchConfig-version.cmake"
+    "/home/mrmat420/car4_autonomous/car4_ws/build/car4_launch/catkin_generated/installspace/car4_launchConfig.cmake"
+    "/home/mrmat420/car4_autonomous/car4_ws/build/car4_launch/catkin_generated/installspace/car4_launchConfig-version.cmake"
     )
 endif()
 
 if("x${CMAKE_INSTALL_COMPONENT}x" STREQUAL "xUnspecifiedx" OR NOT CMAKE_INSTALL_COMPONENT)
-  file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/share/car4_launch" TYPE FILE FILES "/home/lattepanda/Matej_Pulec/car4_autonomous/car4_ws/src/car4_launch/package.xml")
+  file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/share/car4_launch" TYPE FILE FILES "/home/mrmat420/car4_autonomous/car4_ws/src/car4_launch/package.xml")
 endif()
 

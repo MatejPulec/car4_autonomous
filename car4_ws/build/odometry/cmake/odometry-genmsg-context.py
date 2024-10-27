@@ -1,11 +1,11 @@
 # generated from genmsg/cmake/pkg-genmsg.context.in
 
-messages_str = "/home/lattepanda/Matej_Pulec/car4_autonomous/car4_ws/src/odometry/msg/CarState.msg"
+messages_str = "/home/mrmat420/car4_autonomous/car4_ws/src/odometry/msg/CarState.msg"
 services_str = ""
 pkg_name = "odometry"
 dependencies_str = "std_msgs"
 langs = "gencpp;geneus;genlisp;gennodejs;genpy"
-dep_include_paths_str = "odometry;/home/lattepanda/Matej_Pulec/car4_autonomous/car4_ws/src/odometry/msg;std_msgs;/opt/ros/noetic/share/std_msgs/cmake/../msg"
+dep_include_paths_str = "odometry;/home/mrmat420/car4_autonomous/car4_ws/src/odometry/msg;std_msgs;/opt/ros/noetic/share/std_msgs/cmake/../msg"
 PYTHON_EXECUTABLE = "/usr/bin/python3"
 package_has_static_sources = '' == 'TRUE'
 genmsg_check_deps_script = "/opt/ros/noetic/share/genmsg/cmake/../../../lib/genmsg/genmsg_check_deps.py"
