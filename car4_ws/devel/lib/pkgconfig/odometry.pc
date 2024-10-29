@@ -1,8 +1,8 @@
-prefix=/home/mrmat420/car4_autonomous/car4_ws/devel
+prefix=/home/lattepanda/Matej_Pulec/car4_autonomous/car4_ws/devel
 
 Name: odometry
 Description: Description of odometry
 Version: 0.0.0
-Cflags: -I/home/mrmat420/car4_autonomous/car4_ws/devel/include
+Cflags: -I/home/lattepanda/Matej_Pulec/car4_autonomous/car4_ws/devel/include
 Libs: -L${prefix}/lib 
 Requires: rospy std_msgs message_runtime

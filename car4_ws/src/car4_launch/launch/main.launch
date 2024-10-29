@@ -24,4 +24,6 @@
 
     <node pkg="global_planner" type="global_driver.py" name="global_driver" />
 
+    <node pkg="local_planner" type="local_driver.py" name="local_driver" />
+
 </launch>
