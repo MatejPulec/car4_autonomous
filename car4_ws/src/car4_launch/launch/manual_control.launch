@@ -1,0 +1,8 @@
+<?xml version="1.0"?>
+<launch>
+
+    <node pkg="control" type="control.py" name="control_node" />
+
+    <node pkg="control" type="manual_control.py" name="manual_control_node" />
+
+</launch>

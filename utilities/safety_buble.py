@@ -32,7 +32,7 @@ def apply_obstacle_radius_with_mask(map, obstacle, mask, radius):
     return map
 
 # Load the image and convert it to a numpy array
-with Image.open("utilities/map_mashup.pgm") as img:
+with Image.open("car4_autonomous/utilities/map_mashup.pgm") as img:
     map = np.array(img)
 
 # Find the coordinates of obstacle pixels
@@ -40,7 +40,7 @@ y, x = np.where(map == 0)
 obstacle = list(zip(x, y))
 
 # Define the radius around each obstacle pixel
-radius = 10 #0.25m
+radius = 12 #0.3m
 
 # Create the circular mask
 circular_mask = create_circular_mask(radius)
@@ -50,7 +50,7 @@ updated_map = apply_obstacle_radius_with_mask(map, obstacle, circular_mask, radi
 
 # Save the updated map as an image
 updated_img = Image.fromarray(updated_map)
-updated_img.save("utilities/map_mashup_with_safety_bubble.pgm")
+updated_img.save("car4_autonomous/utilities/map_mashup_with_safety_bubble.pgm")
 
 plt.imshow(updated_img, cmap='gray')
 plt.show()

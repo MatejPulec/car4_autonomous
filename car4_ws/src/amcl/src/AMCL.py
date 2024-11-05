@@ -5,7 +5,7 @@ from rospy.numpy_msg import numpy_msg
 from odometry.msg import CarState
 import tf
 from sensor_msgs.msg import LaserScan
-from geometry_msgs.msg import PoseStamped
+from geometry_msgs.msg import PoseStamped, Point
 import numpy as np
 import matplotlib.pyplot as plt
 import random
@@ -15,6 +15,8 @@ import tf
 import os
 import logging
 import threading
+import tf.transformations as tf_trans
+
 
 # Configure the logging
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -338,6 +340,11 @@ def send_tf_transformation(tf_broadcaster, resolution):
             )
         rate.sleep()
 
+def position_reset_callback(msg):
+    global reset_msg
+    reset_msg = msg
+
+
 def main():
     # SETUP
     LIDAR_ANGLE = 240
@@ -355,7 +362,7 @@ def main():
     script_dir = os.path.dirname(os.path.realpath(__file__))
     file_path = os.path.join(script_dir, '../map_mashup.pgm')
 
-    global latest_position, latest_angle
+    global latest_position, latest_angle, reset_msg
 
     # Load map
     with Image.open(file_path) as img:
@@ -367,16 +374,10 @@ def main():
     y, x = np.where(map == 255)
     ok_position = list(zip(x, y))
 
-    # Transmit, recieve init
-    tf_broadcaster = tf.TransformBroadcaster()
-
-    position_publisher = rospy.Publisher(
-        'AMCL_position', PoseStamped, queue_size=10)
-
     # Population init
     position = [114, 500]
     angle = 0
-    population = Population(1, angle, position, choose_randomly=False)
+    population = Population(1, position, angle, choose_randomly=False)
     population.particles[0].position = [114, 500]
     population.particles[0].angle = 0
 
@@ -402,7 +403,24 @@ def main():
     tf_thread = threading.Thread(target=send_tf_transformation, args=(tf_broadcaster, resolution))
     tf_thread.start()
 
+    rospy.Subscriber('/position_reset', PoseStamped, position_reset_callback)
+    reset_msg = []
+
     while 1:
+        if reset_msg:
+            qx = reset_msg.pose.orientation.x
+            qy = reset_msg.pose.orientation.y
+            qz = reset_msg.pose.orientation.z
+            qw = reset_msg.pose.orientation.w
+
+            # Convert quaternion to Euler angles
+            roll, pitch, yaw = tf_trans.euler_from_quaternion([qx, qy, qz, qw])
+
+            # For a 2D application, you only need the yaw angle
+            angle = yaw
+            population = Population(1, [reset_msg.pose.position.x, reset_msg.pose.position.y], angle, choose_randomly=False)
+            reset_msg = []
+
         old_car4_odom_state = car4_odom_state
 
         odometry_msg = rospy.wait_for_message('odometry_data', CarState)

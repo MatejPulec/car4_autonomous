@@ -31,9 +31,11 @@ max_iterations = 10000
 step_size = 50
 final_step_size = 20
 exploration_bias = 0.25
-extra_search_time = 0.05
+extra_search_time = 0
 ball_radius_constant = 50000
 dimension = 2
+
+orphan_coordinates = [[509,498],[497,520],[540,497], [650, 535], [1682, 594], [2570, 624], [2635, 634], [2702, 615], [2722, 337], [2740, 217], [2955,240], [3063,290], [2941,418], [2923, 637], [2817, 624], [313, 533], [306, 642], [108, 640], [78, 547]]
 
 class Node:
     def __init__(self, x, y):
@@ -256,10 +258,14 @@ def interpolate_path(path, max_distance):
 
 
 
-def rrt_star(exploration_bias, extra_search_time):
+def rrt_star(exploration_bias, extra_search_time, orphan_coordinates):
     old_path = []
+    node_coordinates = set()
     (translation, quaternion) = tf_listener.lookupTransform("map", "base_link", rospy.Time(0))
     tree = [Node(translation[0]/0.025, translation[1]/0.025*-1)]
+    orphan_tree = []
+    for coord in orphan_coordinates:
+        orphan_tree.append(Node(coord[0],coord[1]))
     final_node = Node(goal[0], goal[1])
     final_iter = max_iterations
     for i in range(max_iterations):
@@ -269,7 +275,12 @@ def rrt_star(exploration_bias, extra_search_time):
             random_node = get_random_node()
         nearest_node = get_nearest_node(tree, random_node)
         new_node = steer(nearest_node, random_node)
-        if is_in_collision(new_node) or not is_collision_free(nearest_node, new_node):
+        if is_in_collision(new_node):
+            continue
+        if not is_collision_free(nearest_node, new_node):
+            # new_node = find_collision_node(nearest_node, new_node)
+            # if (new_node.x, new_node.y) in node_coordinates:
+            #     continue
             continue
         new_node.parent = nearest_node
         new_node.cost = nearest_node.cost + distance(new_node, nearest_node)
@@ -279,9 +290,9 @@ def rrt_star(exploration_bias, extra_search_time):
         nearby_nodes = get_nearby_nodes(tree, new_node, rewire_radius)
         new_node.parent = choose_parent(tree, nearby_nodes, new_node)
         tree.append(new_node)
+        # node_coordinates.add((new_node.x, new_node.y))
+        tree, orphan_tree = check_for_orphans(new_node, tree, orphan_tree)
         rewire(tree, nearby_nodes, new_node)
-        # print(get_nearest_distance(tree, final_node))
-        # print(i)
         if i % 50 == 0:
             if check_the_cost(tree) != 404 and final_iter == max_iterations:
                 final_iter = np.round(i * (1+extra_search_time))
@@ -289,6 +300,17 @@ def rrt_star(exploration_bias, extra_search_time):
         if i >= final_iter:
             return tree, None
     return tree, None
+
+def check_for_orphans(new_node, tree, orphan_tree):
+    for orphan_node in orphan_tree:
+            if is_collision_free(orphan_node, new_node):
+                orphan_node.parent = new_node
+                orphan_node.cost = new_node.cost + distance(new_node, orphan_node)
+                orphan_tree.remove(orphan_node)
+                tree.append(orphan_node)
+                tree, orphan_tree = check_for_orphans(orphan_node, tree, orphan_tree)
+
+    return tree, orphan_tree
 
 def goal_callback(msg):
     global goal
@@ -308,8 +330,13 @@ def create_trajectory():
         rospy.logerr("Path publisher is not initialized!")
         return
 
+    if map[int(goal[1]), int(goal[0])] != 255:
+        rospy.logwarn("Invalid goal coordinates")
+        rospy.logwarn(map[int(goal[1]), int(goal[0])])
+        return
+    
     # Your trajectory planning logic (simplified for clarity)
-    tree, path = rrt_star(exploration_bias, extra_search_time)  # Example function
+    tree, path = rrt_star(exploration_bias, extra_search_time, orphan_coordinates)  # Example function
     final_node = Node(goal[0], goal[1])  # Example final node from your planner
     available_nodes = get_available_nodes(tree, final_node, step_size)  # Example
     final_node.parent = choose_parent(tree, available_nodes, final_node)  # Example

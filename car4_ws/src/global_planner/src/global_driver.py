@@ -9,11 +9,20 @@ import threading
 import signal
 import sys
 from std_msgs.msg import Float64MultiArray
+from PIL import Image
+import os
 
 class GlobalDriverNode:
     def __init__(self):
         # Initialize ROS node
         rospy.init_node("global_driver")
+
+        #load map
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        with Image.open(os.path.join(script_dir, "../map_mashup_with_safety_bubble.pgm")) as img:
+            self.map = np.array(img)
+
+        self.resolution = 0.025 # [m]
 
         # Set up instance variables
         self.path = []
@@ -53,7 +62,7 @@ class GlobalDriverNode:
         while not rospy.is_shutdown():
             try:
                 # Get the latest transform between 'map' and 'base_link'
-                self.tf_listener.waitForTransform("map", "base_link", rospy.Time(0), rospy.Duration(1.0))
+                self.tf_listener.waitForTransform("map", "base_link", rospy.Time(0), rospy.Duration(5.0))
                 (translation, quaternion) = self.tf_listener.lookupTransform("map", "base_link", rospy.Time(0))
                 self.position = [translation[0], translation[1]]
                 euler_angles = tf.transformations.euler_from_quaternion(quaternion)
@@ -70,14 +79,53 @@ class GlobalDriverNode:
 
     def update_point_to_follow(self, angle):
         min_distance = np.inf
+        # for point in self.path:
+        #     if self.is_collision_free(point, self.position):
+        #         self.point_to_follow = point
+        #         break
+
         for point in self.path:
             distance = np.linalg.norm([point.x - self.position[0], point.y - self.position[1]])
-            if distance <= self.lookforward_distance:
-                self.point_to_follow = point
-                break
-            elif distance < min_distance:
+            if distance < self.lookforward_distance:
+                if self.is_collision_free(point, self.position):
+                    self.point_to_follow = point
+                    break
+            if distance < min_distance:
                 min_distance = distance
                 self.point_to_follow = point
+
+    def is_collision_free(self, node1, node2):
+        x1, y1 = node1.x / self.resolution, node1.y / self.resolution * -1
+        x2, y2 = node2[0] / self.resolution, node2[1] / self.resolution * -1
+        points = self.bresenham(x1, y1, x2, y2)
+        for x, y in points:
+            if self.map[y, x] <= 240:  # Note: map_data[y, x] due to image coordinate system
+                return False
+        return True
+    
+    def bresenham(self, x1, y1, x2, y2):
+        x1 = int(np.round(x1))
+        y1 = int(np.round(y1))
+        x2 = int(np.round(x2))
+        y2 = int(np.round(y2))
+        points = []
+        dx = abs(x2 - x1)
+        dy = abs(y2 - y1)
+        sx = 1 if x1 < x2 else -1
+        sy = 1 if y1 < y2 else -1
+        err = dx - dy
+        while True:
+            points.append((x1, y1))
+            if x1 == x2 and y1 == y2:
+                break
+            e2 = 2 * err
+            if e2 > -dy:
+                err -= dy
+                x1 += sx
+            if e2 < dx:
+                err += dx
+                y1 += sy
+        return points
 
     def send_control_data(self, angle):
         if self.point_to_follow:
@@ -90,6 +138,8 @@ class GlobalDriverNode:
             msg = Float64MultiArray()
             msg.data = [turning_angle, distance]
             self.angle_distance_publisher.publish(msg)
+
+            rospy.logwarn(distance)
 
 
 if __name__ == "__main__":

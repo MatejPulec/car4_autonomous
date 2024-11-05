@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 import rospy
-from geometry_msgs.msg import Point, Polygon
+from geometry_msgs.msg import Point, Polygon, PoseStamped, Quaternion
 import matplotlib.pyplot as plt
 from PIL import Image
 import os
@@ -9,6 +9,7 @@ import numpy as np
 import time
 import threading  # For running the timed function in a background thread
 import tf
+import tf.transformations as tf_trans
 
 # tf_listener = tf.TransformListener()
 
@@ -21,6 +22,15 @@ def publish_coordinates(x, y):
     point.y = y
     point.z = 0  # Assuming z = 0 for 2D map
     pub.publish(point)
+
+def publish_reset_position(x, y, angle):
+    msg = PoseStamped()
+    msg.pose.position.x = x
+    msg.pose.position.y = y
+    msg.pose.position.z = 0  # Assuming z = 0 for 2D map
+    quaternion = tf_trans.quaternion_from_euler(0, 0, angle)
+    msg.pose.orientation = Quaternion(*quaternion)
+    reset_pos_pub.publish(msg)
 
 def path_callback(msg):
     path_x = []
@@ -40,23 +50,33 @@ def path_callback(msg):
         plt.show(block=False)
 
 def onclick(event, ax):
+    global reset_position
     x, y = event.xdata, event.ydata
     if x is not None and y is not None:
         x = np.round(x)
         y = np.round(y)
 
-        publish_coordinates(x, y)
-
-        goal.set_data(x, y)
-        ax.draw_artist(goal)
-        
+        if event.button == 1:  # Left-click: Set goal
+            publish_coordinates(x, y)
+            goal.set_data(x, y)
+            ax.draw_artist(goal)
+        elif event.button == 3:  # Right-click: Send reset position message
+            if reset_position != 0:
+                dx = x-reset_position[0]
+                dy = y-reset_position[1]
+                angle = np.arctan2(dy,dx)
+                publish_reset_position(reset_position[0], reset_position[1], angle)
+                reset_position = 0
+            else:
+                reset_position = [x,y]
+            
         plt.draw()
         plt.show(block=False)
 
 def update_pos():
     while not rospy.is_shutdown():
         time.sleep(1)  # Run this function every second
-        tf_listener.waitForTransform("map", "base_link", rospy.Time(0), rospy.Duration(5.0))
+        tf_listener.waitForTransform("map", "base_link", rospy.Time(0), rospy.Duration(10.0))
         (translation, quaternion) = tf_listener.lookupTransform("map", "base_link", rospy.Time(0))
         x = translation[0]/0.025
         y = translation[1]/0.025 * -1
@@ -77,9 +97,12 @@ def main():
     global trajectory
     global ax
     global tf_listener
+    global reset_pos_pub
+    global reset_position
 
     rospy.init_node('goal_coordinate_publisher', anonymous=True)
     pub = rospy.Publisher('/goal_coordinates', Point, queue_size=10)
+    reset_pos_pub = rospy.Publisher('/position_reset', PoseStamped, queue_size=10)
     tf_listener = tf.TransformListener()
 
     # Subscribe to the path topic
@@ -91,9 +114,11 @@ def main():
 
     fig, ax = plt.subplots()
     ax.imshow(pgm_image, cmap='gray')
-    goal, = ax.plot([], [], 'ro')
-    pos, = ax.plot([], [], 'go')
+    goal, = ax.plot([], [], 'ro', zorder = 9)
+    pos, = ax.plot([], [], 'go', zorder = 10)
     trajectory, = ax.plot([], [], 'bo')
+
+    reset_position = 0
 
     # Capture mouse clicks to send goal coordinates
     cid = fig.canvas.mpl_connect('button_press_event', lambda event: onclick(event, ax))
