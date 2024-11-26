@@ -29,7 +29,7 @@ class ControlNode:
     def control_vector_callback(self,msg):
         packed_data = self.prepare_data_to_PIC33(list(msg.data))
         self.ser_ftdi.write(packed_data)
-        rospy.logwarn("here")
+        rospy.logwarn(msg)
 
 
     def setting_serial_PC_PIC(self):

@@ -31,7 +31,7 @@ class LocalDriverNode:
 
         # Set up subscriber and publisher
         self.path_subscriber = rospy.Subscriber("/point_to_follow_angle_distance", Float64MultiArray, self.angle_distance_callback)
-        self.scan_subscriber = rospy.Subscriber("/scan", LaserScan, self.potential_field_callback)
+        self.scan_subscriber = rospy.Subscriber("/scan", LaserScan, self.disparity_extender_callback)
         self.control_vector_publisher = rospy.Publisher("/control_vector", Int32MultiArray, queue_size=10)
 
     def angle_distance_callback(self, msg):
@@ -85,7 +85,7 @@ class LocalDriverNode:
         self.control_vector_publisher.publish(msg)
 
 
-    def laser_scan_callback(self, msg):
+    def disparity_extender_callback(self, msg):
 
         # self.goal_angle = 0
 
