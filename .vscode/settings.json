@@ -1,3 +1,13 @@
 {
-    "cmake.sourceDirectory": "/home/mrmat420/car4_autonomous/car4_ws/src/amcl"
+    "cmake.sourceDirectory": "/home/mrmat420/car4_autonomous/car4_ws/src/amcl",
+    "terminal.integrated.env.linux": {
+        "PYTHONPATH": "/home/lattepanda/Matej_Pulec/car4_autonomous/car4_ws/src"
+    },
+    "python.envFile": "${workspaceFolder}/.env",
+    "python.formatting.provider": "autopep8",
+    "[python]": {
+        "editor.formatOnSave": true
+    }
+
+    
 }

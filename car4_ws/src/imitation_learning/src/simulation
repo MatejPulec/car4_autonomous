@@ -1,0 +1,219 @@
+#!/usr/bin/env python3
+import rospy
+import numpy as np
+import tf
+from sensor_msgs.msg import LaserScan
+from PIL import Image
+import os
+import logging
+import threading
+import tf.transformations as tf_trans
+import matplotlib.pyplot as plt  # Import for visualization
+
+# Configure the logging
+logging.basicConfig(level=logging.DEBUG,
+                    format='%(asctime)s - %(levelname)s - %(message)s')
+
+
+class Laser:
+    def __init__(self):
+        self.angles = []
+
+    def callback(self, msg):
+        self.ranges = msg.ranges
+        if len(self.angles) == 0:
+            self.angles = np.arange(
+                msg.angle_max, msg.angle_min - msg.angle_increment, -msg.angle_increment)
+
+
+def bresenham_raytrace(start, end, map):
+    """Ray tracing to simulate LIDAR scan."""
+    distance = 0
+    x1, y1 = start
+    x2, y2 = end
+    is_steep = abs(y2 - y1) > abs(x2 - x1)
+    
+    if is_steep:
+        x1, y1 = y1, x1
+        x2, y2 = y2, x2
+    
+    if x2 > x1:
+        x_step = 1
+    else:
+        x_step = -1
+    if y2 > y1:
+        y_step = 1
+    else:
+        y_step = -1
+
+    abs_dx = np.abs(x2 - x1)
+    abs_dy = np.abs(y2 - y1)
+
+    x = x1
+    y = y1
+    D = 2 * abs_dy - abs_dx
+    for x in range(x1, x2 + x_step, x_step):
+        x_to_write = x
+        y_to_write = y
+        if is_steep:
+            x_to_write, y_to_write = y_to_write, x_to_write
+        if map[y_to_write, x_to_write] == 0:
+            distance = np.linalg.norm([start[0]-x_to_write, start[1]-y_to_write])
+            break
+
+        if D > 0:
+            y = y + y_step
+            D = D - 2 * abs_dx
+        D = D + 2*abs_dy
+
+    return distance
+
+
+def generate_scan(pos, angle, map, resolution, LIDAR_NUMBER_OF_POINTS, LIDAR_ANGLE):
+    """Generate lidar scan using ray tracing."""
+    angles = np.linspace(-(LIDAR_ANGLE/2), (LIDAR_ANGLE/2), LIDAR_NUMBER_OF_POINTS)
+    angles = np.deg2rad(angles)
+    distances = np.zeros(LIDAR_NUMBER_OF_POINTS)
+    max_range = 4 / resolution
+    compensation_angle = 0
+    for i, a in enumerate(angles):
+        # Calculate the direction vector based on the lidar angle
+        direction = np.array([np.cos(a + angle + compensation_angle), np.sin(a + angle + compensation_angle)])
+        end_pos = pos + max_range * direction
+        max_pos = [map.shape[1]-1, map.shape[0]-1]
+        min_pos = [0, 0]
+        range = []
+
+        if end_pos[0] > max_pos[0]:
+            range.append(np.abs((max_pos[0] - pos[0])/direction[0]))
+
+        if end_pos[0] < min_pos[0]:
+            range.append(np.abs((min_pos[0] - pos[0])/direction[0]))
+
+        if end_pos[1] > max_pos[1]:
+            range.append(np.abs((max_pos[1] - pos[1])/direction[1]))
+
+        if end_pos[1] < min_pos[1]:
+            range.append(np.abs((min_pos[1] - pos[1])/direction[1]))
+
+        if len(range) != 0:
+            end_pos = pos + min(range) * direction
+
+        end_pos = np.ceil(end_pos)
+        pos = np.ceil(pos)
+        pos = [int(pos[0]), int(pos[1])]
+        end_pos = [int(end_pos[0]), int(end_pos[1])]
+
+        distances[i] = resolution * bresenham_raytrace(pos, end_pos, map)
+    
+    return angles, distances
+
+
+def car_motion_update(position, angle, speed, turning_radius, delta_time):
+    """Update the car's position and angle based on speed and turning radius."""
+    
+    turning_radius = turning_radius / resolution
+
+    if turning_radius == 0:
+        # Straight line motion
+        dx = speed * np.cos(angle)
+        dy = speed * np.sin(angle) * -1
+        new_position = [position[0] + dx * delta_time, position[1] + dy * delta_time]
+        new_angle = angle
+    else:
+        # Circular motion
+        R = turning_radius
+        # Calculate the angular velocity
+        angular_velocity = speed / R
+        # Update position and orientation
+        new_angle = angle + angular_velocity * delta_time
+        local_x = R * np.sin(angular_velocity * delta_time)
+        local_y = R * (1 - np.cos(angular_velocity * delta_time))
+        dx = np.cos(angle) * local_x - np.sin(angle) * local_y
+        dy = np.sin(angle) * local_x + np.cos(angle) * local_y
+        dy = -dy  # Same direction as car
+        new_position = [position[0] + dx, position[1] + dy]
+
+    return new_position, new_angle
+
+
+def update_plot(car_marker, map, position, angle):
+    """Update the car's position on the map."""
+    # Update the car's position and orientation based on input
+    speed = 100  # Example: car speed (can vary from -1 to 1)
+    turning_radius = 10  # Example: car turning radius (from 0 to 20 or -20)
+
+    position, angle = car_motion_update(position, angle, speed, turning_radius, delta_time=0.1)
+    
+    # Get the lidar scan using ray tracing
+    laser_angles, laser_ranges = generate_scan(position, angle, map, resolution, LIDAR_NUMBER_OF_POINTS, LIDAR_ANGLE)
+
+    # Update car position on the map
+    car_marker.set_data(position[0], position[1])
+
+    return car_marker, position, angle, laser_angles, laser_ranges
+
+
+def plot_lidar_data(lidar_ax, laser_angles, laser_ranges):
+    """Plot the LIDAR scan on the second subplot."""
+    lidar_ax.clear()
+    lidar_ax.set_title("LIDAR Scan")
+    lidar_ax.set_xlim(-5, 5)
+    lidar_ax.set_ylim(-5, 5)
+    lidar_ax.set_xlabel("X")
+    lidar_ax.set_ylabel("Y")
+    
+    # Convert polar coordinates to Cartesian coordinates for plotting
+    lidar_x = laser_ranges * np.sin(laser_angles)
+    lidar_y = laser_ranges * np.cos(laser_angles)
+    
+    # Plot the LIDAR points
+    lidar_ax.scatter(lidar_x, lidar_y, c='blue', s=2)
+
+
+def main():
+
+    global position, angle, resolution, LIDAR_ANGLE, LIDAR_NUMBER_OF_POINTS
+    
+    # Setup
+    LIDAR_ANGLE = 240
+    LIDAR_NUMBER_OF_POINTS = 682
+    resolution = 0.025
+    script_dir = os.path.dirname(os.path.realpath(__file__))
+    file_path = os.path.join(script_dir, '../map_mashup.pgm')
+
+    # Load map
+    with Image.open(file_path) as img:
+        map = np.array(img)
+
+    position = [114, 500]
+    angle = 0
+
+    # Setup the map and lidar visualization
+    fig, (map_ax, lidar_ax) = plt.subplots(1, 2, figsize=(15, 7))
+    
+    # Display the map in grayscale
+    map_ax.imshow(map, cmap='gray', origin='lower')
+    map_ax.invert_yaxis()
+    car_marker, = map_ax.plot([], [], 'ro', markersize=5)  # Red 'o' for the car
+
+    # Start simulation loop
+    rospy.init_node('car_simulation')
+
+    while not rospy.is_shutdown():
+        # Update car position, map, and LIDAR data
+        car_marker, position, angle, laser_angles, laser_ranges = update_plot(car_marker, map, position, angle)
+        
+        # Update the LIDAR plot
+        plot_lidar_data(lidar_ax, laser_angles, laser_ranges)
+        
+        # Redraw the plots
+        plt.draw()
+        plt.pause(0.1)  # Pause for 100ms to control the simulation update rate
+
+    # Keep the plot open
+    plt.show()
+
+
+if __name__ == "__main__":
+    main()

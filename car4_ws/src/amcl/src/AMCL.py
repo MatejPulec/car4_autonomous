@@ -19,8 +19,8 @@ import tf.transformations as tf_trans
 
 
 # Configure the logging
-logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
-
+logging.basicConfig(level=logging.DEBUG,
+                    format='%(asctime)s - %(levelname)s - %(message)s')
 
 
 class Laser:
@@ -127,9 +127,10 @@ class Population:
     def __init__(self, pop_size, position, angle, choose_randomly):
         self.particles = [Particle(
             angle, position, choose_randomly=choose_randomly) for _ in range(pop_size)]
-        
+
     def check_position(self, map):
-        self.particles = [particle for particle in self.particles if map[int(particle.position[1]), int(particle.position[0])] == 255]
+        self.particles = [particle for particle in self.particles if map[int(
+            particle.position[1]), int(particle.position[0])] == 255]
 
     def sort(self):
         self.particles = sorted(
@@ -323,22 +324,25 @@ def generate_scan(pos, angle, map, resolution, LIDAR_NUMBER_OF_POINTS, LIDAR_ANG
 latest_position = None
 latest_angle = None
 
+
 def send_tf_transformation(tf_broadcaster, resolution):
     global latest_position, latest_angle
     rate = rospy.Rate(10)  # 10 Hz
     while not rospy.is_shutdown():
         if latest_position is not None and latest_angle is not None:
-            quaternion = tf.transformations.quaternion_from_euler(0, 0, latest_angle * -1)
+            quaternion = tf.transformations.quaternion_from_euler(
+                0, 0, latest_angle * -1)
             tf_broadcaster.sendTransform(
                 # Translation
                 (latest_position[0] * resolution,
-                 latest_position[1] * resolution * -1, 0),#different axes
+                 latest_position[1] * resolution * -1, 0),  # different axes
                 quaternion,
                 rospy.Time.now(),
                 "AMCL",  # Child frame
                 "map"  # Parent frame
             )
         rate.sleep()
+
 
 def position_reset_callback(msg):
     global reset_msg
@@ -400,7 +404,8 @@ def main():
     tf_broadcaster = tf.TransformBroadcaster()
 
     # Start the transformation sending thread
-    tf_thread = threading.Thread(target=send_tf_transformation, args=(tf_broadcaster, resolution))
+    tf_thread = threading.Thread(
+        target=send_tf_transformation, args=(tf_broadcaster, resolution))
     tf_thread.start()
 
     rospy.Subscriber('/position_reset', PoseStamped, position_reset_callback)
@@ -418,7 +423,8 @@ def main():
 
             # For a 2D application, you only need the yaw angle
             angle = yaw
-            population = Population(1, [reset_msg.pose.position.x, reset_msg.pose.position.y], angle, choose_randomly=False)
+            population = Population(
+                1, [reset_msg.pose.position.x, reset_msg.pose.position.y], angle, choose_randomly=False)
             reset_msg = []
 
         old_car4_odom_state = car4_odom_state
@@ -442,17 +448,16 @@ def main():
                                      laser_msg.angle_increment, -laser_msg.angle_increment)
 
         laser_ranges = np.array(laser_ranges)
-        
+
         jumps = 0
         for i in range(len(laser_ranges)-1):
-            if abs(laser_ranges[i]-laser_ranges[i+1])>0.5:
+            if abs(laser_ranges[i]-laser_ranges[i+1]) > 0.5:
                 jumps += 1
 
         if no_zeros:
             nonzero_idx = np.nonzero(laser_ranges >= 0.05)
         X = np.sin(laser_angles[nonzero_idx]) * laser_ranges[nonzero_idx]
         Y = np.cos(laser_angles[nonzero_idx]) * laser_ranges[nonzero_idx]
-
 
         population.move(dx_local, dy_local, car4_odom_da,
                         max_pos, min_pos, resolution, proportional_error)
@@ -469,9 +474,12 @@ def main():
         if plot:
             # Example data
             particles_to_plot = min(4, len(population.particles))
-            X_particle = [particle.X for particle in population.particles[:particles_to_plot]]
-            Y_particle = [particle.Y for particle in population.particles[:particles_to_plot]]
-            Weight_particle = [particle.weight for particle in population.particles[:particles_to_plot]]
+            X_particle = [
+                particle.X for particle in population.particles[:particles_to_plot]]
+            Y_particle = [
+                particle.Y for particle in population.particles[:particles_to_plot]]
+            Weight_particle = [
+                particle.weight for particle in population.particles[:particles_to_plot]]
 
             # Iterate over the first particles_to_plot particles and plot them in the subplots
             for i, ax in enumerate(axes.flat):
@@ -479,7 +487,8 @@ def main():
                     ax.clear()
                     ax.scatter(X, Y)
                     ax.scatter(X_particle[i], Y_particle[i])
-                    ax.set_title(f'Particle {i + 1}\nWeight: {Weight_particle[i]:.4f}\nJumps: {jumps}')
+                    ax.set_title(
+                        f'Particle {i + 1}\nWeight: {Weight_particle[i]:.4f}\nJumps: {jumps}')
                     ax.axis('equal')
 
             # Adjust layout to prevent clipping of titles
@@ -488,7 +497,6 @@ def main():
             # Show the plot
             plt.pause(0.1)
 
-        
         # x_est = [sublist[0] for sublist in pos_est]
         # y_est = [sublist[1] for sublist in pos_est]
         # plt.clf()
@@ -503,7 +511,9 @@ def main():
         pos_est.append(copy.deepcopy(particle_with_highest_weight.position))
 
         if jumps > 4:
-            population.resample(pos_sigma, angle_sigma, elite_size, children_size)  #todo calculate children size on the fly, maybe add random particles?
+            # todo calculate children size on the fly, maybe add random particles?
+            population.resample(pos_sigma, angle_sigma,
+                                elite_size, children_size)
 
         latest_position = copy.deepcopy(particle_with_highest_weight.position)
         latest_angle = copy.deepcopy(particle_with_highest_weight.angle)
