@@ -9,6 +9,7 @@ import logging
 import threading
 import tf.transformations as tf_trans
 import matplotlib.pyplot as plt  # Import for visualization
+import pygame
 
 # Configure the logging
 logging.basicConfig(level=logging.DEBUG,
@@ -112,12 +113,12 @@ def generate_scan(pos, angle, map, resolution, LIDAR_NUMBER_OF_POINTS, LIDAR_ANG
 def car_motion_update(position, angle, speed, turning_radius, delta_time):
     """Update the car's position and angle based on speed and turning radius."""
     
-    turning_radius = turning_radius / resolution
+    turning_radius = turning_radius / resolution *-1
 
     if turning_radius == 0:
         # Straight line motion
         dx = speed * np.cos(angle)
-        dy = speed * np.sin(angle) * -1
+        dy = speed * np.sin(angle)
         new_position = [position[0] + dx * delta_time, position[1] + dy * delta_time]
         new_angle = angle
     else:
@@ -131,17 +132,13 @@ def car_motion_update(position, angle, speed, turning_radius, delta_time):
         local_y = R * (1 - np.cos(angular_velocity * delta_time))
         dx = np.cos(angle) * local_x - np.sin(angle) * local_y
         dy = np.sin(angle) * local_x + np.cos(angle) * local_y
-        dy = -dy  # Same direction as car
         new_position = [position[0] + dx, position[1] + dy]
 
     return new_position, new_angle
 
 
-def update_plot(car_marker, map, position, angle):
+def update_plot(car_marker, map, position, angle, speed, turning_radius):
     """Update the car's position on the map."""
-    # Update the car's position and orientation based on input
-    speed = 100  # Example: car speed (can vary from -1 to 1)
-    turning_radius = 10  # Example: car turning radius (from 0 to 20 or -20)
 
     position, angle = car_motion_update(position, angle, speed, turning_radius, delta_time=0.1)
     
@@ -182,6 +179,14 @@ def main():
     script_dir = os.path.dirname(os.path.realpath(__file__))
     file_path = os.path.join(script_dir, '../map_mashup.pgm')
 
+    # Initialize Pygame and the Joystick
+    pygame.init()
+    joystick = pygame.joystick.Joystick(0)
+    joystick.init()
+
+    print(f"Gamepad connected: {joystick.get_name()}")
+
+
     # Load map
     with Image.open(file_path) as img:
         map = np.array(img)
@@ -200,16 +205,31 @@ def main():
     # Start simulation loop
     rospy.init_node('car_simulation')
 
+    rate = rospy.Rate(100)
+
+    lookup_out = [-0.65, -1.1, -2, -4, -10, -20, 0, 20, 10, 4, 2, 1.1, 0.65]
+    lookup_in = [-4, -3, -2, -1.5, -0.6, -0.05, 0, 0.05, 0.6, 1.5, 2, 3, 4]
+
     while not rospy.is_shutdown():
+        pygame.event.pump()
+
+        speed = -joystick.get_axis(1) * 200
+        turning_radius = joystick.get_axis(2) * 20
+        turning_radius = 0
+
+        print(speed, turning_radius)
+
         # Update car position, map, and LIDAR data
-        car_marker, position, angle, laser_angles, laser_ranges = update_plot(car_marker, map, position, angle)
+        car_marker, position, angle, laser_angles, laser_ranges = update_plot(car_marker, map, position, angle, speed, turning_radius)
         
         # Update the LIDAR plot
         plot_lidar_data(lidar_ax, laser_angles, laser_ranges)
         
         # Redraw the plots
         plt.draw()
-        plt.pause(0.1)  # Pause for 100ms to control the simulation update rate
+        plt.pause(0.0001)  # Pause for 100ms to control the simulation update rate
+
+        rate.sleep()
 
     # Keep the plot open
     plt.show()
