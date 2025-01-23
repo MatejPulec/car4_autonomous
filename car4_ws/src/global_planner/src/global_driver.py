@@ -12,17 +12,18 @@ from std_msgs.msg import Float64MultiArray
 from PIL import Image
 import os
 
+
 class GlobalDriverNode:
     def __init__(self):
         # Initialize ROS node
         rospy.init_node("global_driver")
 
-        #load map
+        # load map
         script_dir = os.path.dirname(os.path.abspath(__file__))
-        with Image.open(os.path.join(script_dir, "../map_mashup_with_safety_bubble.pgm")) as img:
+        with Image.open(os.path.join(script_dir, "../map_mashup.pgm")) as img:
             self.map = np.array(img)
 
-        self.resolution = 0.025 # [m]
+        self.resolution = 0.025  # [m]
 
         # Set up instance variables
         self.path = []
@@ -34,9 +35,12 @@ class GlobalDriverNode:
         self.tf_listener = tf.TransformListener()
 
         # Set up subscriber and publisher
-        self.path_subscriber = rospy.Subscriber("/path", Polygon, self.path_callback)
-        self.point_publisher = rospy.Publisher("point_to_follow_global", Point32, queue_size=10)
-        self.angle_distance_publisher = rospy.Publisher("point_to_follow_angle_distance", Float64MultiArray, queue_size=10)
+        self.path_subscriber = rospy.Subscriber(
+            "/path", Polygon, self.path_callback)
+        self.point_publisher = rospy.Publisher(
+            "point_to_follow_global", Point32, queue_size=10)
+        self.angle_distance_publisher = rospy.Publisher(
+            "point_to_follow_angle_distance", Float64MultiArray, queue_size=10)
 
         # Start a thread to continuously update transformations
         self.tf_thread = threading.Thread(target=self.update_tf)
@@ -62,10 +66,13 @@ class GlobalDriverNode:
         while not rospy.is_shutdown():
             try:
                 # Get the latest transform between 'map' and 'base_link'
-                self.tf_listener.waitForTransform("map", "base_link", rospy.Time(0), rospy.Duration(5.0))
-                (translation, quaternion) = self.tf_listener.lookupTransform("map", "base_link", rospy.Time(0))
+                self.tf_listener.waitForTransform(
+                    "map", "base_link", rospy.Time(0), rospy.Duration(5.0))
+                (translation, quaternion) = self.tf_listener.lookupTransform(
+                    "map", "base_link", rospy.Time(0))
                 self.position = [translation[0], translation[1]]
-                euler_angles = tf.transformations.euler_from_quaternion(quaternion)
+                euler_angles = tf.transformations.euler_from_quaternion(
+                    quaternion)
                 angle = euler_angles[2]
             except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException):
                 rospy.logwarn("Failed to lookup transformations")
@@ -85,7 +92,8 @@ class GlobalDriverNode:
         #         break
 
         for point in self.path:
-            distance = np.linalg.norm([point.x - self.position[0], point.y - self.position[1]])
+            distance = np.linalg.norm(
+                [point.x - self.position[0], point.y - self.position[1]])
             if distance < self.lookforward_distance:
                 if self.is_collision_free(point, self.position):
                     self.point_to_follow = point
@@ -102,7 +110,7 @@ class GlobalDriverNode:
             if self.map[y, x] <= 240:  # Note: map_data[y, x] due to image coordinate system
                 return False
         return True
-    
+
     def bresenham(self, x1, y1, x2, y2):
         x1 = int(np.round(x1))
         y1 = int(np.round(y1))
@@ -129,17 +137,17 @@ class GlobalDriverNode:
 
     def send_control_data(self, angle):
         if self.point_to_follow:
-            
-            turning_angle = np.arctan2(self.point_to_follow.y - self.position[1], self.point_to_follow.x - self.position[0]) - angle
+
+            turning_angle = np.arctan2(
+                self.point_to_follow.y - self.position[1], self.point_to_follow.x - self.position[0]) - angle
             turning_angle = (turning_angle + np.pi) % (2 * np.pi) - np.pi
 
             self.point_publisher.publish(self.point_to_follow)
-            distance = float(np.linalg.norm([self.point_to_follow.y - self.position[1], self.point_to_follow.x - self.position[0]]))
+            distance = float(np.linalg.norm(
+                [self.point_to_follow.y - self.position[1], self.point_to_follow.x - self.position[0]]))
             msg = Float64MultiArray()
             msg.data = [turning_angle, distance]
             self.angle_distance_publisher.publish(msg)
-
-            rospy.logwarn(distance)
 
 
 if __name__ == "__main__":

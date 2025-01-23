@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+<launch>
+    <arg name="rate" default="10" />
+    
+    <node pkg="tf" type="static_transform_publisher" name="static_tf_publisher_lidar" output="screen"
+          args="0.3245 0 0 0 0 0 base_link lidar_frame 100" />
+
+    <node pkg="global_planner" type="goal_select.py" name="goal_select" />
+
+    <node pkg="imitation_learning" type="simulation.py" name="simulation" />
+
+    <node pkg="global_planner" type="RRT_star.py" name="RRT_star" />
+
+    <node pkg="global_planner" type="global_driver.py" name="global_driver" />
+
+    <node pkg="local_planner" type="local_driver.py" name="local_driver" />
+
+
+</launch>
