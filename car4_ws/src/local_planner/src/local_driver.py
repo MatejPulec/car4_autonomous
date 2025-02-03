@@ -33,6 +33,9 @@ class LocalDriverNode:
         model_path = os.path.join(
             current_directory, "../../imitation_learning/trained_model")
         self.loaded_model = tf.keras.models.load_model(model_path)
+        model_class_path = os.path.join(
+            current_directory, "../../imitation_learning/trained_model_class")
+        self.loaded_model_class = tf.keras.models.load_model(model_class_path)
 
         self.speed = 180
         # Initialize ROS node
@@ -234,6 +237,46 @@ class LocalDriverNode:
         output = self.loaded_model.predict(input_data_normalized)
         speed_stick = output[0][0]
         turning_stick = output[0][1]
+        control_vector = [99, 0, np.clip(
+            int(128+(turning_stick*256/2)), 1, 254), int(127+speed_stick*-30), 0]
+        msg_to_send = Int32MultiArray()
+        msg_to_send.data = control_vector
+        self.control_vector_publisher.publish(msg_to_send)
+
+    def neural_network_class_callback(self, msg):
+        laser_ranges = np.array(msg.ranges)
+        input_data = np.concatenate(
+            (laser_ranges, [self.goal_angle, self.goal_distance]))
+        input_min = np.concatenate((np.zeros(682), [-np.pi, 0]))
+        input_max = np.concatenate((np.ones(682)*4, [np.pi, 3]))
+        input_data_normalized = (input_data - input_min) / \
+            (input_max - input_min)  # Normalize to [0, 1]
+        input_data_normalized = np.expand_dims(
+            input_data_normalized, axis=0)  # model expects inputs in batches
+        output = self.loaded_model_class.predict(input_data_normalized)
+
+        predicted_class = np.argmax(output[0])
+        # rospy.logwarn(predicted_class)
+        if predicted_class == 0:
+            turning_stick = 0
+            speed_stick = -1
+
+        if predicted_class == 1:
+            turning_stick = -1
+            speed_stick = -1
+
+        if predicted_class == 2:
+            turning_stick = 1
+            speed_stick = -1
+
+        if predicted_class == 3:
+            turning_stick = 1
+            speed_stick = 1
+
+        if predicted_class == 4:
+            turning_stick = -1
+            speed_stick = 1
+
         control_vector = [99, 0, np.clip(
             int(128+(turning_stick*256/2)), 1, 254), int(127+speed_stick*-30), 0]
         msg_to_send = Int32MultiArray()

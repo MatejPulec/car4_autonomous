@@ -189,7 +189,6 @@ def plot_stuff(lidar_ax, laser_angles, laser_ranges, goal_angle, goal_distance):
     lidar_ax.scatter(lidar_x, lidar_y, c='blue', s=2, label="LIDAR Points")
 
     # Convert goal polar coordinates to Cartesian coordinates
-    goal_angle = goal_angle * -1
     goal_x = goal_distance * np.sin(goal_angle)
     goal_y = goal_distance * np.cos(goal_angle)
 
@@ -340,7 +339,7 @@ class SimulationNode():
         self.training_data = []
         self.training_data_current_batch = []
 
-        self.user_control = 1
+        self.user_control = 0
         self.control_vector = []
 
         self.starting_position = [0, 0]
@@ -380,7 +379,8 @@ class SimulationNode():
 
         # Map
         script_dir = os.path.dirname(os.path.realpath(__file__))
-        file_path = os.path.join(script_dir, '../map_mashup.pgm')
+        file_path = os.path.join(
+            script_dir, '../map_mashup_with_obstacles.pgm')
         file_path_safety_bubble = os.path.join(
             script_dir, '../map_mashup_with_safety_bubble.pgm')
         self.lookup_in = np.array(
@@ -399,14 +399,14 @@ class SimulationNode():
                             for x, y in self.ok_position if 500 <= x <= 2600]
 
         # Initialize Pygame and the Joystick
-        if self.user_control == 1:
-            pygame.init()
-            joystick = pygame.joystick.Joystick(0)
-            joystick.init()
-            print(f"Gamepad connected: {joystick.get_name()}")
+        pygame.init()
+        joystick = pygame.joystick.Joystick(0)
+        joystick.init()
+        print(f"Gamepad connected: {joystick.get_name()}")
 
         # Initial state
         self.position = [1400, 550]
+        self.position = list(random.choice(self.ok_position))
         self.starting_position = self.position
         self.angle = 0
 
@@ -421,7 +421,7 @@ class SimulationNode():
 
         # Start simulation loop
 
-        self.rate = rospy.Rate(20)
+        self.rate = rospy.Rate(100)
 
         self.choose_goal()
 
@@ -443,7 +443,7 @@ class SimulationNode():
                     self.turning_stick = 0
                 else:
                     self.speed_stick = (self.control_vector[3]-127)/-127
-                    self.turning_stick = (self.control_vector[2]-127)/-127
+                    self.turning_stick = (self.control_vector[2]-127)/127
                     if self.speed_stick > 0:
                         self.speed_stick = 1
                     if self.speed_stick < 0:
@@ -472,15 +472,26 @@ class SimulationNode():
 
             self.append_training_data()
 
-            if np.linalg.norm(np.array(self.goal) - np.array(self.position)) * self.resolution < 0.5:
+            # if np.linalg.norm(np.array(self.goal) - np.array(self.position)) * self.resolution < 0.5: # If I arrived to the destination
+            # I am 1.5m from the starting position
+            if np.linalg.norm(np.array(self.starting_position) - np.array(self.position)) * self.resolution > 2.5 or np.linalg.norm(np.array(self.goal) - np.array(self.position)) * self.resolution < 0.5:
                 self.training_data.append(self.training_data_current_batch)
-                self.training_data_current_batch = []
                 self.position = list(random.choice(self.ok_position))
                 self.starting_position = self.position
                 self.angle = random.uniform(-np.pi, np.pi)
                 self.send_tf_transformation()
-                self.choose_goal()
                 time.sleep(1)
+                self.training_data_current_batch = []
+                self.choose_goal()
+
+            if joystick.get_button(3) == 1:
+                self.position = list(random.choice(self.ok_position))
+                self.starting_position = self.position
+                self.angle = random.uniform(-np.pi, np.pi)
+                self.send_tf_transformation()
+                time.sleep(1)
+                self.training_data_current_batch = []
+                self.choose_goal()
 
             self.rate.sleep()
 
@@ -677,9 +688,8 @@ class SimulationNode():
                               s=2, label="LIDAR Points")
 
         # Convert goal polar coordinates to Cartesian coordinates
-        self.goal_angle = self.goal_angle * -1
-        goal_x = self.goal_distance * np.sin(self.goal_angle)
-        goal_y = self.goal_distance * np.cos(self.goal_angle)
+        goal_x = self.goal_distance * np.sin(self.goal_angle*-1)
+        goal_y = self.goal_distance * np.cos(self.goal_angle*-1)
 
         # Plot the goal as a red star
         self.lidar_ax.scatter(goal_x, goal_y, c='red',

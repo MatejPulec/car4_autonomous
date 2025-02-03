@@ -9,10 +9,25 @@ from sklearn.utils import shuffle
 current_directory = os.path.dirname(os.path.abspath(__file__))
 
 # List of training data file paths
+# file_names = [
+#     "../training_data/training_data_manual_20_01.pkl",
+#     "../training_data/training_data_manual_20_01_2.pkl",
+#     "../training_data/training_data_disparity_20_01.pkl",
+# ]
+
 file_names = [
-    "../training_data/training_data_manual_20_01.pkl",
-    "../training_data/training_data_manual_20_01_2.pkl",
-    "../training_data/training_data_disparity_20_01.pkl",
+    "../training_data/training_data_empty_hallway.pkl",
+    "../training_data/training_data_empty_hallway_2.pkl",
+    "../training_data/training_data_empty_hallway_3.pkl",
+    "../training_data/training_data_sides.pkl",
+    "../training_data/training_data_sides_2.pkl",
+    "../training_data/training_data_sides_3.pkl",
+    "../training_data/training_data_sides_4.pkl",
+    "../training_data/training_data_hallway_obstacles.pkl",
+    "../training_data/training_data_hallway_obstacles_2.pkl",
+    "../training_data/training_data_hallway_obstacles_3.pkl",
+    "../training_data/training_data_hallway_obstacles_4.pkl",
+    "../training_data/training_data_hallway_obstacles_5.pkl",
 ]
 
 X = []
@@ -78,6 +93,11 @@ X = (X - X_min) / (X_max - X_min)  # Normalize to [0, 1]
 # Define the model
 model = tf.keras.Sequential([
     tf.keras.layers.InputLayer(input_shape=(len(X[0]),)),  # Input layer
+
+    # Fully connected hidden layers
+    tf.keras.layers.Dense(4, activation='relu'),
+
+
     tf.keras.layers.Dense(2)                               # Output layer
 ])
 
@@ -88,10 +108,10 @@ model.compile(optimizer='adam', loss='mse', metrics=['mae'])
 history = model.fit(
     X, y,
     validation_split=0.2,  # 20% for validation
-    epochs=200,
+    epochs=400,
     batch_size=1024,
     callbacks=[tf.keras.callbacks.EarlyStopping(
-        patience=50, restore_best_weights=True)],
+        patience=200, restore_best_weights=True)],
     verbose=1
 )
 
