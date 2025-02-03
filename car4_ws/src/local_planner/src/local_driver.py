@@ -45,7 +45,7 @@ class LocalDriverNode:
         self.path_subscriber = rospy.Subscriber(
             "/point_to_follow_angle_distance", Float64MultiArray, self.angle_distance_callback)
         self.scan_subscriber = rospy.Subscriber(
-            "/scan", LaserScan, self.neural_network_callback)
+            "/scan", LaserScan, self.neural_network_class_callback)
         self.control_vector_publisher = rospy.Publisher(
             "/control_vector", Int32MultiArray, queue_size=10)
 
@@ -259,6 +259,10 @@ class LocalDriverNode:
         # rospy.logwarn(predicted_class)
         if predicted_class == 0:
             turning_stick = 0
+            if output[0][1] > output[0][2]:
+                turning_stick = output[0][1]/(output[0][0]+output[0][1]) * -1
+            if output[0][1] < output[0][2]:
+                turning_stick = output[0][2]/(output[0][0]+output[0][2])
             speed_stick = -1
 
         if predicted_class == 1:
