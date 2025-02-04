@@ -4,5 +4,5 @@ PROJECT_PKG_CONFIG_INCLUDE_DIRS = "".split(';') if "" != "" else []
 PROJECT_CATKIN_DEPENDS = "".replace(';', ' ')
 PKG_CONFIG_LIBRARIES_WITH_PREFIX = "".split(';') if "" != "" else []
 PROJECT_NAME = "amcl"
-PROJECT_SPACE_DIR = "/home/mrmat420/car4_autonomous/car4_ws/install"
+PROJECT_SPACE_DIR = "/home/lattepanda/Matej_Pulec/car4_autonomous/car4_ws/install"
 PROJECT_VERSION = "0.0.0"

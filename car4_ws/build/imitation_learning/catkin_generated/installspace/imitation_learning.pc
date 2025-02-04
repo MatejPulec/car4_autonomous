@@ -1,4 +1,4 @@
-prefix=/home/mrmat420/car4_autonomous/car4_ws/install
+prefix=/home/lattepanda/Matej_Pulec/car4_autonomous/car4_ws/install
 
 Name: imitation_learning
 Description: Description of imitation_learning

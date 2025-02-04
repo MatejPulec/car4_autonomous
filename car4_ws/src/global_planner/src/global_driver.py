@@ -11,6 +11,8 @@ import sys
 from std_msgs.msg import Float64MultiArray
 from PIL import Image
 import os
+from std_msgs.msg import Bool
+
 
 
 class GlobalDriverNode:
@@ -41,6 +43,8 @@ class GlobalDriverNode:
             "point_to_follow_global", Point32, queue_size=10)
         self.angle_distance_publisher = rospy.Publisher(
             "point_to_follow_angle_distance", Float64MultiArray, queue_size=10)
+        self.visible_finish_flag_publisher = rospy.Publisher(
+            "visible_finish_flag", Bool, queue_size=10)
 
         # Start a thread to continuously update transformations
         self.tf_thread = threading.Thread(target=self.update_tf)
@@ -86,10 +90,7 @@ class GlobalDriverNode:
 
     def update_point_to_follow(self, angle):
         min_distance = np.inf
-        # for point in self.path:
-        #     if self.is_collision_free(point, self.position):
-        #         self.point_to_follow = point
-        #         break
+
 
         for point in self.path:
             distance = np.linalg.norm(
@@ -97,6 +98,10 @@ class GlobalDriverNode:
             if distance < self.lookforward_distance:
                 if self.is_collision_free(point, self.position):
                     self.point_to_follow = point
+                    if point == self.path[0]:
+                        self.visible_finish_flag_publisher.publish(1)
+                    else:
+                        self.visible_finish_flag_publisher.publish(0)
                     break
             if distance < min_distance:
                 min_distance = distance

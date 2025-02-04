@@ -29,12 +29,12 @@ class ControlNode:
     def control_vector_callback(self,msg):
         packed_data = self.prepare_data_to_PIC33(list(msg.data))
         self.ser_ftdi.write(packed_data)
-        rospy.logwarn(msg)
+        # rospy.logwarn(msg)
 
 
     def setting_serial_PC_PIC(self):
         # Configure the serial port to SEND data
-        port = '/dev/ttyUSB0'
+        port = '/dev/serial/by-id/usb-FTDI_FT231X_USB_UART_DN03FSC5-if00-port0'
         baud_rate = 115200
         ser_ftdi = serial.Serial(
             port=port,

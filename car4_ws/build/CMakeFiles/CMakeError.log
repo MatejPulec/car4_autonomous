@@ -1,21 +1,21 @@
 Performing C SOURCE FILE Test CMAKE_HAVE_LIBC_PTHREAD failed with the following output:
-Change Dir: /home/mrmat420/car4_autonomous/car4_ws/build/CMakeFiles/CMakeTmp
+Change Dir: /home/lattepanda/Matej_Pulec/car4_autonomous/car4_ws/build/CMakeFiles/CMakeTmp
 
-Run Build Command(s):/usr/bin/make cmTC_876f6/fast && /usr/bin/make -f CMakeFiles/cmTC_876f6.dir/build.make CMakeFiles/cmTC_876f6.dir/build
-make[1]: Entering directory '/home/mrmat420/car4_autonomous/car4_ws/build/CMakeFiles/CMakeTmp'
-Building C object CMakeFiles/cmTC_876f6.dir/src.c.o
-/usr/bin/cc   -DCMAKE_HAVE_LIBC_PTHREAD   -o CMakeFiles/cmTC_876f6.dir/src.c.o   -c /home/mrmat420/car4_autonomous/car4_ws/build/CMakeFiles/CMakeTmp/src.c
-Linking C executable cmTC_876f6
-/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_876f6.dir/link.txt --verbose=1
-/usr/bin/cc  -DCMAKE_HAVE_LIBC_PTHREAD    -rdynamic CMakeFiles/cmTC_876f6.dir/src.c.o  -o cmTC_876f6 
-/usr/bin/ld: CMakeFiles/cmTC_876f6.dir/src.c.o: in function `main':
+Run Build Command(s):/usr/bin/make cmTC_c0e3b/fast && /usr/bin/make -f CMakeFiles/cmTC_c0e3b.dir/build.make CMakeFiles/cmTC_c0e3b.dir/build
+make[1]: Entering directory '/home/lattepanda/Matej_Pulec/car4_autonomous/car4_ws/build/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_c0e3b.dir/src.c.o
+/usr/bin/cc   -DCMAKE_HAVE_LIBC_PTHREAD   -o CMakeFiles/cmTC_c0e3b.dir/src.c.o   -c /home/lattepanda/Matej_Pulec/car4_autonomous/car4_ws/build/CMakeFiles/CMakeTmp/src.c
+Linking C executable cmTC_c0e3b
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_c0e3b.dir/link.txt --verbose=1
+/usr/bin/cc  -DCMAKE_HAVE_LIBC_PTHREAD    -rdynamic CMakeFiles/cmTC_c0e3b.dir/src.c.o  -o cmTC_c0e3b 
+/usr/bin/ld: CMakeFiles/cmTC_c0e3b.dir/src.c.o: in function `main':
 src.c:(.text+0x46): undefined reference to `pthread_create'
 /usr/bin/ld: src.c:(.text+0x52): undefined reference to `pthread_detach'
 /usr/bin/ld: src.c:(.text+0x63): undefined reference to `pthread_join'
 collect2: error: ld returned 1 exit status
-make[1]: *** [CMakeFiles/cmTC_876f6.dir/build.make:87: cmTC_876f6] Error 1
-make[1]: Leaving directory '/home/mrmat420/car4_autonomous/car4_ws/build/CMakeFiles/CMakeTmp'
-make: *** [Makefile:121: cmTC_876f6/fast] Error 2
+make[1]: *** [CMakeFiles/cmTC_c0e3b.dir/build.make:87: cmTC_c0e3b] Error 1
+make[1]: Leaving directory '/home/lattepanda/Matej_Pulec/car4_autonomous/car4_ws/build/CMakeFiles/CMakeTmp'
+make: *** [Makefile:121: cmTC_c0e3b/fast] Error 2
 
 
 Source file was:
@@ -39,20 +39,20 @@ int main(void)
 }
 
 Determining if the function pthread_create exists in the pthreads failed with the following output:
-Change Dir: /home/mrmat420/car4_autonomous/car4_ws/build/CMakeFiles/CMakeTmp
+Change Dir: /home/lattepanda/Matej_Pulec/car4_autonomous/car4_ws/build/CMakeFiles/CMakeTmp
 
-Run Build Command(s):/usr/bin/make cmTC_8de96/fast && /usr/bin/make -f CMakeFiles/cmTC_8de96.dir/build.make CMakeFiles/cmTC_8de96.dir/build
-make[1]: Entering directory '/home/mrmat420/car4_autonomous/car4_ws/build/CMakeFiles/CMakeTmp'
-Building C object CMakeFiles/cmTC_8de96.dir/CheckFunctionExists.c.o
-/usr/bin/cc   -DCHECK_FUNCTION_EXISTS=pthread_create   -o CMakeFiles/cmTC_8de96.dir/CheckFunctionExists.c.o   -c /usr/share/cmake-3.16/Modules/CheckFunctionExists.c
-Linking C executable cmTC_8de96
-/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_8de96.dir/link.txt --verbose=1
-/usr/bin/cc  -DCHECK_FUNCTION_EXISTS=pthread_create    -rdynamic CMakeFiles/cmTC_8de96.dir/CheckFunctionExists.c.o  -o cmTC_8de96  -lpthreads 
+Run Build Command(s):/usr/bin/make cmTC_ba62e/fast && /usr/bin/make -f CMakeFiles/cmTC_ba62e.dir/build.make CMakeFiles/cmTC_ba62e.dir/build
+make[1]: Entering directory '/home/lattepanda/Matej_Pulec/car4_autonomous/car4_ws/build/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_ba62e.dir/CheckFunctionExists.c.o
+/usr/bin/cc   -DCHECK_FUNCTION_EXISTS=pthread_create   -o CMakeFiles/cmTC_ba62e.dir/CheckFunctionExists.c.o   -c /usr/share/cmake-3.16/Modules/CheckFunctionExists.c
+Linking C executable cmTC_ba62e
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_ba62e.dir/link.txt --verbose=1
+/usr/bin/cc  -DCHECK_FUNCTION_EXISTS=pthread_create    -rdynamic CMakeFiles/cmTC_ba62e.dir/CheckFunctionExists.c.o  -o cmTC_ba62e  -lpthreads 
 /usr/bin/ld: cannot find -lpthreads
 collect2: error: ld returned 1 exit status
-make[1]: *** [CMakeFiles/cmTC_8de96.dir/build.make:87: cmTC_8de96] Error 1
-make[1]: Leaving directory '/home/mrmat420/car4_autonomous/car4_ws/build/CMakeFiles/CMakeTmp'
-make: *** [Makefile:121: cmTC_8de96/fast] Error 2
+make[1]: *** [CMakeFiles/cmTC_ba62e.dir/build.make:87: cmTC_ba62e] Error 1
+make[1]: Leaving directory '/home/lattepanda/Matej_Pulec/car4_autonomous/car4_ws/build/CMakeFiles/CMakeTmp'
+make: *** [Makefile:121: cmTC_ba62e/fast] Error 2
 
 
 

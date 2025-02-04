@@ -5,11 +5,11 @@ import serial
 import struct
 import numpy as np
 import matplotlib.pyplot as plt
-from geometry_msgs.msg import Polygon, Point32
+from geometry_msgs.msg import Point
 import threading
 import signal
 import sys
-from std_msgs.msg import Float64MultiArray, Int32MultiArray
+from std_msgs.msg import Float64MultiArray, Int32MultiArray, Bool
 from sensor_msgs.msg import LaserScan
 from copy import deepcopy
 import math
@@ -26,7 +26,7 @@ class LocalDriverNode:
 
         # disparity extender
         self.disparity_threshold = 0.5
-        self.distance_threshold = 2
+        self.distance_threshold = 4
 
         # neural network
         current_directory = os.path.dirname(os.path.abspath(__file__))
@@ -45,9 +45,14 @@ class LocalDriverNode:
         self.path_subscriber = rospy.Subscriber(
             "/point_to_follow_angle_distance", Float64MultiArray, self.angle_distance_callback)
         self.scan_subscriber = rospy.Subscriber(
-            "/scan", LaserScan, self.neural_network_class_callback)
+            "/scan", LaserScan, self.disparity_extender_callback)
         self.control_vector_publisher = rospy.Publisher(
             "/control_vector", Int32MultiArray, queue_size=10)
+        self.visible_finish_flag_subscriber = rospy.Subscriber(
+            "/visible_finish_flag", Bool, self.visible_finish_flag_callback)
+
+    def visible_finish_flag_callback(self, msg):
+        self.visible_finish_flag = msg.data
 
     def angle_distance_callback(self, msg):
 
@@ -124,8 +129,8 @@ class LocalDriverNode:
         ranges = deepcopy(laser_ranges)
         masked_out_ranges = deepcopy(ranges)
         # find disparities
-        disparity_TH = 0.5     # I hope its in meters
-        car_safety_bbl = 0.4    # I really hope its meters
+        disparity_TH = 0.2     # I hope its in meters
+        car_safety_bbl = 0.5    # I really hope its meters
 
         for idx, rng in enumerate(ranges):
 
@@ -158,7 +163,7 @@ class LocalDriverNode:
                         if masked_out_ranges[i] > rng:
                             masked_out_ranges[i] = rng
 
-        # Attempt at using weights
+        # # Attempt at using weights
         # max_value = -np.inf
 
         # for idx, masked_range in enumerate(masked_out_ranges):
@@ -171,34 +176,47 @@ class LocalDriverNode:
 
         # Identify candidate angles
 
-        candidate_angles = []
+        candidate_angles = set()
 
         # First, consider angles with sufficient range
         for idx, masked_range in enumerate(masked_out_ranges):
             if masked_range > self.distance_threshold:  # Check if the distance exceeds the threshold
-                candidate_angles.append(self.laser_angles[idx])
+                candidate_angles.add((self.laser_angles[idx], masked_range))
 
         # Next, search for disparities and add those angles
         for idx in range(len(masked_out_ranges) - 1):
             if abs(masked_out_ranges[idx + 1] - masked_out_ranges[idx]) > disparity_TH:
                 # Choose the angle corresponding to the greater distance
                 if masked_out_ranges[idx + 1] > masked_out_ranges[idx]:
-                    candidate_angles.append(self.laser_angles[idx + 1])
+                    candidate_angles.add((self.laser_angles[idx + 1], masked_out_ranges[idx + 1]))
                 else:
-                    candidate_angles.append(self.laser_angles[idx])
+                    candidate_angles.add((self.laser_angles[idx], masked_out_ranges[idx]))
 
         # Remove duplicates and sort candidate angles
-        candidate_angles = sorted(set(candidate_angles))
+        candidate_angles = sorted(candidate_angles, key=lambda x: x[0])
 
-        # Choose the best candidate angle
-        if candidate_angles:
-            # Compute the angular distance to the goal angle for each candidate
-            angular_distances = [abs(angle - self.goal_angle)
-                                 for angle in candidate_angles]
-            # Select the candidate with the smallest angular distance to the goal
-            best_angle = candidate_angles[np.argmin(angular_distances)]
+        if self.visible_finish_flag == True:
 
-        speed, dir = self.dir_to_control(-best_angle)
+            rospy.logwarn("finish, toto potreba upravit jeste")
+            if candidate_angles:
+                # Compute the angular distance to the goal angle for each candidate
+                angular_distances = [abs(angle - self.goal_angle) for angle, _ in candidate_angles]
+                
+                # Select the candidate with the smallest angular distance to the goal
+                best_angle = list(candidate_angles)[np.argmin(angular_distances)][0]
+        else:
+            # Attempt at using weights
+            max_value = -np.inf
+            for angle,masked_range in candidate_angles:
+                value = masked_range * \
+                    np.cos(angle - self.goal_angle) * \
+                    np.abs(np.cos(angle - self.goal_angle))
+                if value > max_value:
+                    best_angle = angle
+                    max_value = value
+
+
+        speed, dir = self.dir_to_control(best_angle)
 
         control_vector = [99, 0, int(dir), int(speed), 0]
         msg_to_send = Int32MultiArray()
@@ -209,12 +227,28 @@ class LocalDriverNode:
 
         # steering_angle = (msg.angle_min + (idx_direction/(len(masked_out_ranges)-1))*(msg.angle_max - msg.angle_min)) #go in direction of max value
 
-        # # plt.clf()  # Clear the previous plot
+        plt.clf()  # Clear the previous plot
 
-        # # lidar_x = laser_ranges * np.sin(self.laser_angles)
-        # # lidar_y = laser_ranges * np.cos(self.laser_angles)
-        # # plt.plot(lidar_x, lidar_y)
-        # # plt.pause(0.001)
+        # Convert polar coordinates to Cartesian
+        lidar_x = masked_out_ranges * -np.sin(self.laser_angles)
+        lidar_y = masked_out_ranges * np.cos(self.laser_angles)
+        plt.plot(lidar_x, lidar_y, label='Masked Ranges', color='blue')
+
+        best_angle_x = 4*-np.sin(best_angle)
+        best_angle_y = 4*np.cos(best_angle)
+        plt.plot([0,best_angle_x],[0,best_angle_y])
+
+
+        # Set plot limits
+        plt.xlim(-4, 4)
+        plt.ylim(-4, 4)
+
+        plt.xlabel('X (meters)')
+        plt.ylabel('Y (meters)')
+        plt.title('LIDAR Masked Ranges with Candidate Angles')
+        plt.grid(True)
+        plt.legend()
+        plt.pause(0.001)
 
     def disparity_extender_and_potential_field_callback(self, msg):
         if not hasattr(self, 'goal_angle'):
@@ -291,7 +325,7 @@ class LocalDriverNode:
 
         if abs(angle) <= 1.6:
             speed = 127 + 30
-            dir = int(np.clip(127 - 200 * angle, 1, 254))
+            dir = int(np.clip(127 - 350 * angle, 1, 254))
         else:
             speed = 127 - 30
             dir = 254 if angle > 0 else 1

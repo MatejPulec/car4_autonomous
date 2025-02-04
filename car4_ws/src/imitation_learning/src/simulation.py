@@ -239,94 +239,94 @@ def send_tf_transformation(position, angle, tf_broadcaster, resolution):
 
 # NOT USED, if everything works, this along with many functions can be deleted
 # It uses the class instead
-def main():
+# def main():
 
-    rospy.init_node('car_simulation')
+#     rospy.init_node('car_simulation')
 
-    global position, angle, resolution, LIDAR_ANGLE, LIDAR_NUMBER_OF_POINTS, goal_publisher
+#     global position, angle, resolution, LIDAR_ANGLE, LIDAR_NUMBER_OF_POINTS, goal_publisher
 
-    # Setup
-    LIDAR_ANGLE = 240
-    LIDAR_NUMBER_OF_POINTS = 682
-    goal_publisher = rospy.Publisher('/goal_coordinates', Point, queue_size=10)
-    tf_broadcaster = tf.TransformBroadcaster()
-    resolution = 0.025
-    script_dir = os.path.dirname(os.path.realpath(__file__))
-    file_path = os.path.join(script_dir, '../map_mashup.pgm')
-    file_path_safety_bubble = os.path.join(
-        script_dir, '../map_mashup_with_safety_bubble.pgm')
-    lookup_in = np.array(
-        [-4, -3, -2, -1.5, -0.6, -0.05, 0, 0.05, 0.6, 1.5, 2, 3, 4])
-    lookup_out = np.array(
-        [-0.65, -1.1, -2, -4, -10, -20, 0, 20, 10, 4, 2, 1.1, 0.65])
+#     # Setup
+#     LIDAR_ANGLE = 240
+#     LIDAR_NUMBER_OF_POINTS = 682
+#     goal_publisher = rospy.Publisher('/goal_coordinates', Point, queue_size=10)
+#     tf_broadcaster = tf.TransformBroadcaster()
+#     resolution = 0.025
+#     script_dir = os.path.dirname(os.path.realpath(__file__))
+#     file_path = os.path.join(script_dir, '../map_mashup.pgm')
+#     file_path_safety_bubble = os.path.join(
+#         script_dir, '../map_mashup_with_safety_bubble.pgm')
+#     lookup_in = np.array(
+#         [-4, -3, -2, -1.5, -0.6, -0.05, 0, 0.05, 0.6, 1.5, 2, 3, 4])
+#     lookup_out = np.array(
+#         [-0.65, -1.1, -2, -4, -10, -20, 0, 20, 10, 4, 2, 1.1, 0.65])
 
-    # Initialize Pygame and the Joystick
-    pygame.init()
-    joystick = pygame.joystick.Joystick(0)
-    joystick.init()
-    print(f"Gamepad connected: {joystick.get_name()}")
+#     # Initialize Pygame and the Joystick
+#     pygame.init()
+#     joystick = pygame.joystick.Joystick(0)
+#     joystick.init()
+#     print(f"Gamepad connected: {joystick.get_name()}")
 
-    # Load map
-    with Image.open(file_path) as img:
-        map = np.array(img)
-    with Image.open(file_path_safety_bubble) as img:
-        map_safety_bubble = np.array(img)
-    y, x = np.where(map_safety_bubble == 255)
-    ok_position = list(zip(x, y))
+#     # Load map
+#     with Image.open(file_path) as img:
+#         map = np.array(img)
+#     with Image.open(file_path_safety_bubble) as img:
+#         map_safety_bubble = np.array(img)
+#     y, x = np.where(map_safety_bubble == 255)
+#     ok_position = list(zip(x, y))
 
-    position = [114, 500]
-    angle = 0
-    send_tf_transformation(position, angle, tf_broadcaster, resolution)
+#     position = [114, 500]
+#     angle = 0
+#     send_tf_transformation(position, angle, tf_broadcaster, resolution)
 
-    # Setup the map and lidar visualization
-    fig, lidar_ax = plt.subplots(1, 1, figsize=(15, 15))
-    lidar_ax.set_aspect('equal', adjustable='box')
+#     # Setup the map and lidar visualization
+#     fig, lidar_ax = plt.subplots(1, 1, figsize=(15, 15))
+#     lidar_ax.set_aspect('equal', adjustable='box')
 
-    # Start simulation loop
+#     # Start simulation loop
 
-    rate = rospy.Rate(100)
+#     rate = rospy.Rate(100)
 
-    goal = random.choice(ok_position)
-    publish_coordinates(goal[0], goal[1])
+#     goal = random.choice(ok_position)
+#     publish_coordinates(goal[0], goal[1])
 
-    while not rospy.is_shutdown():
-        pygame.event.pump()
+#     while not rospy.is_shutdown():
+#         pygame.event.pump()
 
-        speed_stick = joystick.get_axis(1)
-        turning_stick = joystick.get_axis(2)
-        if abs(speed_stick) < 0.05:
-            speed_stick = 0
-        if abs(turning_stick) < 0.05:
-            turning_stick = 0
-        print(speed_stick, turning_stick)
-        speed = -speed_stick * 30
-        turning_radius = -lookup(turning_stick *
-                                 4, lookup_in, lookup_out)
+#         speed_stick = joystick.get_axis(1)
+#         turning_stick = joystick.get_axis(2)
+#         if abs(speed_stick) < 0.05:
+#             speed_stick = 0
+#         if abs(turning_stick) < 0.05:
+#             turning_stick = 0
+#         print(speed_stick, turning_stick)
+#         speed = -speed_stick * 30
+#         turning_radius = -lookup(turning_stick *
+#                                  4, lookup_in, lookup_out)
 
-        # Update car position, map, and LIDAR data
-        position, angle, laser_angles, laser_ranges = update_plot(
-            map, position, angle, speed, turning_radius)
+#         # Update car position, map, and LIDAR data
+#         position, angle, laser_angles, laser_ranges = update_plot(
+#             map, position, angle, speed, turning_radius)
 
-        send_tf_transformation(position, angle, tf_broadcaster, resolution)
+#         send_tf_transformation(position, angle, tf_broadcaster, resolution)
 
-        msg = rospy.wait_for_message(
-            "/point_to_follow_angle_distance", Float64MultiArray)
-        goal_angle = msg.data[0]
-        goal_distance = msg.data[1]
+#         msg = rospy.wait_for_message(
+#             "/point_to_follow_angle_distance", Float64MultiArray)
+#         goal_angle = msg.data[0]
+#         goal_distance = msg.data[1]
 
-        # Update the LIDAR plot
-        plot_stuff(lidar_ax, laser_angles, laser_ranges,
-                   goal_angle, goal_distance)
+#         # Update the LIDAR plot
+#         plot_stuff(lidar_ax, laser_angles, laser_ranges,
+#                    goal_angle, goal_distance)
 
-        # Redraw the plots
-        plt.draw()
-        # Pause for 100ms to control the simulation update rate
-        plt.pause(0.0001)
+#         # Redraw the plots
+#         plt.draw()
+#         # Pause for 100ms to control the simulation update rate
+#         plt.pause(0.0001)
 
-        rate.sleep()
+#         rate.sleep()
 
-    # Keep the plot open
-    plt.show()
+#     # Keep the plot open
+#     plt.show()
 
 
 class SimulationNode():
@@ -399,14 +399,14 @@ class SimulationNode():
                             for x, y in self.ok_position if 500 <= x <= 2600]
 
         # Initialize Pygame and the Joystick
-        pygame.init()
-        joystick = pygame.joystick.Joystick(0)
-        joystick.init()
-        print(f"Gamepad connected: {joystick.get_name()}")
+        # pygame.init()
+        # joystick = pygame.joystick.Joystick(0)
+        # joystick.init()
+        # print(f"Gamepad connected: {joystick.get_name()}")
 
         # Initial state
-        self.position = [1400, 550]
-        self.position = list(random.choice(self.ok_position))
+        self.position = [150, 500]
+        # self.position = list(random.choice(self.ok_position))
         self.starting_position = self.position
         self.angle = 0
 
@@ -434,9 +434,10 @@ class SimulationNode():
             i += 1
 
             if self.user_control == 1:
-                pygame.event.pump()
-                self.speed_stick = joystick.get_axis(1)
-                self.turning_stick = joystick.get_axis(2)
+                # pygame.event.pump()
+                # self.speed_stick = joystick.get_axis(1)
+                # self.turning_stick = joystick.get_axis(2)
+                pass
             else:
                 if self.control_vector == []:
                     self.speed_stick = 0
@@ -474,24 +475,24 @@ class SimulationNode():
 
             # if np.linalg.norm(np.array(self.goal) - np.array(self.position)) * self.resolution < 0.5: # If I arrived to the destination
             # I am 1.5m from the starting position
-            if np.linalg.norm(np.array(self.starting_position) - np.array(self.position)) * self.resolution > 2.5 or np.linalg.norm(np.array(self.goal) - np.array(self.position)) * self.resolution < 0.5:
-                self.training_data.append(self.training_data_current_batch)
-                self.position = list(random.choice(self.ok_position))
-                self.starting_position = self.position
-                self.angle = random.uniform(-np.pi, np.pi)
-                self.send_tf_transformation()
-                time.sleep(1)
-                self.training_data_current_batch = []
-                self.choose_goal()
+            # if np.linalg.norm(np.array(self.starting_position) - np.array(self.position)) * self.resolution > 2.5 or np.linalg.norm(np.array(self.goal) - np.array(self.position)) * self.resolution < 0.5:
+            #     self.training_data.append(self.training_data_current_batch)
+            #     self.position = list(random.choice(self.ok_position))
+            #     self.starting_position = self.position
+            #     self.angle = random.uniform(-np.pi, np.pi)
+            #     self.send_tf_transformation()
+            #     time.sleep(1)
+            #     self.training_data_current_batch = []
+            #     self.choose_goal()
 
-            if joystick.get_button(3) == 1:
-                self.position = list(random.choice(self.ok_position))
-                self.starting_position = self.position
-                self.angle = random.uniform(-np.pi, np.pi)
-                self.send_tf_transformation()
-                time.sleep(1)
-                self.training_data_current_batch = []
-                self.choose_goal()
+            # if joystick.get_button(3) == 1:
+            #     self.position = list(random.choice(self.ok_position))
+            #     self.starting_position = self.position
+            #     self.angle = random.uniform(-np.pi, np.pi)
+            #     self.send_tf_transformation()
+            #     time.sleep(1)
+            #     self.training_data_current_batch = []
+            #     self.choose_goal()
 
             self.rate.sleep()
 
