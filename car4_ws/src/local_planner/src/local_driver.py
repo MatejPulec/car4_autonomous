@@ -15,6 +15,7 @@ from copy import deepcopy
 import math
 import os
 import tensorflow as tf
+import time
 
 
 class LocalDriverNode:
@@ -26,7 +27,7 @@ class LocalDriverNode:
 
         # disparity extender
         self.disparity_threshold = 0.5
-        self.distance_threshold = 4
+        self.distance_threshold = 1.5
 
         # neural network
         current_directory = os.path.dirname(os.path.abspath(__file__))
@@ -36,8 +37,17 @@ class LocalDriverNode:
         model_class_path = os.path.join(
             current_directory, "../../imitation_learning/trained_model_class")
         self.loaded_model_class = tf.keras.models.load_model(model_class_path)
+        
+        self.previous_speed = 0
+        self.speed = 127
+        self.min_speed = 20
+        self.max_speed = 100
+        self.speed_increment = 50
+        self.last_update_time = time.monotonic()
 
-        self.speed = 180
+        self.sigma = np.pi/4
+
+        self.visible_finish_flag = 0
         # Initialize ROS node
         rospy.init_node("local_driver")
 
@@ -58,6 +68,9 @@ class LocalDriverNode:
 
         self.goal_angle = msg.data[0]
         self.goal_distance = msg.data[1]
+
+    def gauss_weight(self, angle):
+        return np.exp(-0.5 * (angle / self.sigma) ** 2)
 
     # Potential field
     def potential_field_callback(self, msg):
@@ -123,7 +136,7 @@ class LocalDriverNode:
         # Retrieve raw LIDAR data
         laser_ranges = np.array(msg.ranges)
 
-        laser_ranges = [10 if r < 0.05 else r for r in msg.ranges]
+        laser_ranges = [4 if r < 0.05 or r > 4 else r for r in msg.ranges]
 
         # get ranges
         ranges = deepcopy(laser_ranges)
@@ -163,25 +176,8 @@ class LocalDriverNode:
                         if masked_out_ranges[i] > rng:
                             masked_out_ranges[i] = rng
 
-        # # Attempt at using weights
-        # max_value = -np.inf
-
-        # for idx, masked_range in enumerate(masked_out_ranges):
-        #     value = masked_range * \
-        #         np.cos(self.laser_angles[idx] - self.goal_angle) * \
-        #         np.abs(np.cos(self.laser_angles[idx] - self.goal_angle))
-        #     if value > max_value:
-        #         best_angle = self.laser_angles[idx]
-        #         max_value = value
-
-        # Identify candidate angles
-
         candidate_angles = set()
 
-        # First, consider angles with sufficient range
-        for idx, masked_range in enumerate(masked_out_ranges):
-            if masked_range > self.distance_threshold:  # Check if the distance exceeds the threshold
-                candidate_angles.add((self.laser_angles[idx], masked_range))
 
         # Next, search for disparities and add those angles
         for idx in range(len(masked_out_ranges) - 1):
@@ -192,33 +188,73 @@ class LocalDriverNode:
                 else:
                     candidate_angles.add((self.laser_angles[idx], masked_out_ranges[idx]))
 
-        # Remove duplicates and sort candidate angles
-        candidate_angles = sorted(candidate_angles, key=lambda x: x[0])
-
         if self.visible_finish_flag == True:
 
-            rospy.logwarn("finish, toto potreba upravit jeste")
-            if candidate_angles:
-                # Compute the angular distance to the goal angle for each candidate
-                angular_distances = [abs(angle - self.goal_angle) for angle, _ in candidate_angles]
+                    # First, consider angles with sufficient range
+            for idx, masked_range in enumerate(masked_out_ranges):
+                if masked_range >= self.goal_distance:  # Check if the distance exceeds the threshold
+                    candidate_angles.add((self.laser_angles[idx], masked_range))
+
+            if len(candidate_angles) == 0:
+                candidate_angles = [(angle, rng) for angle, rng in zip(self.laser_angles, masked_out_ranges)]
+            
+            candidate_angles = sorted(candidate_angles, key=lambda x: x[0])
+
+            # Compute the angular distance to the goal angle for each candidate
+            angular_distances = [abs(angle - self.goal_angle) for angle, _ in candidate_angles]
+            
+            # Select the candidate with the smallest angular distance to the goal
+            best_angle = list(candidate_angles)[np.argmin(angular_distances)][0]
+
+            forward, dir = self.dir_to_control(best_angle)
+
+            target_speed = 127 + self.min_speed
+            if forward == -1:
+                target_speed = 127 - self.min_speed
                 
-                # Select the candidate with the smallest angular distance to the goal
-                best_angle = list(candidate_angles)[np.argmin(angular_distances)][0]
         else:
+
+            # First, consider angles with sufficient range
+            for idx, masked_range in enumerate(masked_out_ranges):
+                if masked_range > self.distance_threshold:  # Check if the distance exceeds the threshold
+                    candidate_angles.add((self.laser_angles[idx], masked_range))
+
+                if len(candidate_angles) == 0:
+                    candidate_angles = set((angle, rng) for angle, rng in zip(self.laser_angles, masked_out_ranges))
+
+
+            candidate_angles = sorted(candidate_angles, key=lambda x: x[0])
+
             # Attempt at using weights
             max_value = -np.inf
             for angle,masked_range in candidate_angles:
                 value = masked_range * \
-                    np.cos(angle - self.goal_angle) * \
-                    np.abs(np.cos(angle - self.goal_angle))
+                    ((self.gauss_weight(angle - self.goal_angle))*self.gauss_weight(angle)**0)
+                    # (2*np.cos(angle - self.goal_angle)+np.cos(angle))
                 if value > max_value:
                     best_angle = angle
                     max_value = value
 
+            forward, dir = self.dir_to_control(best_angle)
 
-        speed, dir = self.dir_to_control(best_angle)
+            free_space_sum = 0
+            for idx, masked_range in enumerate(masked_out_ranges):
+                free_space_sum = free_space_sum + masked_range * (self.gauss_weight(self.laser_angles[idx])*self.gauss_weight(self.laser_angles[idx]-self.goal_angle))
+            free_space_sum = free_space_sum/len(masked_out_ranges)
+            
+            target_speed = 127 + np.clip(free_space_sum, 0.2, 1) * self.max_speed
+            
+            if forward == -1:
+                target_speed = 127 - self.min_speed
 
-        control_vector = [99, 0, int(dir), int(speed), 0]
+
+        current_update_time = time.monotonic()
+        time_delta = current_update_time - self.last_update_time
+        self.last_update_time = current_update_time
+
+        self.speed = self.speed + np.clip(target_speed-self.speed,-time_delta*self.speed_increment, time_delta*self.speed_increment)
+        rospy.logwarn(self.speed)
+        control_vector = [99, 0, int(dir), int(self.speed), 0]
         msg_to_send = Int32MultiArray()
         msg_to_send.data = control_vector
         self.control_vector_publisher.publish(msg_to_send)
@@ -324,12 +360,14 @@ class LocalDriverNode:
     def dir_to_control(self, angle):
 
         if abs(angle) <= 1.6:
-            speed = 127 + 30
+            # speed = 127 + 30\
+            forward = 1
             dir = int(np.clip(127 - 350 * angle, 1, 254))
         else:
-            speed = 127 - 30
+            # speed = 127 - 30
+            forward = -1
             dir = 254 if angle > 0 else 1
-        return speed, dir
+        return forward, dir
 
     def local_minima_with_radius(self, arr, r):
         arr = list(arr)

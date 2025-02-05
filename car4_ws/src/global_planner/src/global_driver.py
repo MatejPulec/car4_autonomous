@@ -30,7 +30,7 @@ class GlobalDriverNode:
         # Set up instance variables
         self.path = []
         self.position = None
-        self.lookforward_distance = 3  # [m]
+        self.lookforward_distance = 1.5  # [m]
         self.point_to_follow = None
 
         # Set up TF listener
