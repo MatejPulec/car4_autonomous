@@ -55,7 +55,7 @@ class LocalDriverNode:
         self.path_subscriber = rospy.Subscriber(
             "/point_to_follow_angle_distance", Float64MultiArray, self.angle_distance_callback)
         self.scan_subscriber = rospy.Subscriber(
-            "/scan", LaserScan, self.disparity_extender_callback)
+            "/scan", LaserScan, self.neural_network_callback)
         self.control_vector_publisher = rospy.Publisher(
             "/control_vector", Int32MultiArray, queue_size=10)
         self.visible_finish_flag_subscriber = rospy.Subscriber(
@@ -259,32 +259,28 @@ class LocalDriverNode:
         msg_to_send.data = control_vector
         self.control_vector_publisher.publish(msg_to_send)
 
-        # idx_direction = masked_out_ranges.index(max_masked_out)
+        # plt.clf()  # Clear the previous plot
 
-        # steering_angle = (msg.angle_min + (idx_direction/(len(masked_out_ranges)-1))*(msg.angle_max - msg.angle_min)) #go in direction of max value
+        # # Convert polar coordinates to Cartesian
+        # lidar_x = masked_out_ranges * -np.sin(self.laser_angles)
+        # lidar_y = masked_out_ranges * np.cos(self.laser_angles)
+        # plt.plot(lidar_x, lidar_y, label='Masked Ranges', color='blue')
 
-        plt.clf()  # Clear the previous plot
-
-        # Convert polar coordinates to Cartesian
-        lidar_x = masked_out_ranges * -np.sin(self.laser_angles)
-        lidar_y = masked_out_ranges * np.cos(self.laser_angles)
-        plt.plot(lidar_x, lidar_y, label='Masked Ranges', color='blue')
-
-        best_angle_x = 4*-np.sin(best_angle)
-        best_angle_y = 4*np.cos(best_angle)
-        plt.plot([0,best_angle_x],[0,best_angle_y])
+        # best_angle_x = 4*-np.sin(best_angle)
+        # best_angle_y = 4*np.cos(best_angle)
+        # plt.plot([0,best_angle_x],[0,best_angle_y])
 
 
-        # Set plot limits
-        plt.xlim(-4, 4)
-        plt.ylim(-4, 4)
+        # # Set plot limits
+        # plt.xlim(-4, 4)
+        # plt.ylim(-4, 4)
 
-        plt.xlabel('X (meters)')
-        plt.ylabel('Y (meters)')
-        plt.title('LIDAR Masked Ranges with Candidate Angles')
-        plt.grid(True)
-        plt.legend()
-        plt.pause(0.001)
+        # plt.xlabel('X (meters)')
+        # plt.ylabel('Y (meters)')
+        # plt.title('LIDAR Masked Ranges with Candidate Angles')
+        # plt.grid(True)
+        # plt.legend()
+        # plt.pause(0.001)
 
     def disparity_extender_and_potential_field_callback(self, msg):
         if not hasattr(self, 'goal_angle'):
