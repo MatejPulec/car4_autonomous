@@ -1,8 +1,8 @@
-# Install script for directory: /home/lattepanda/Matej_Pulec/car4_autonomous/car4_ws/src/imitation_learning
+# Install script for directory: /home/mrmat420/car4_autonomous/car4_ws/src/imitation_learning
 
 # Set the install prefix
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)
-  set(CMAKE_INSTALL_PREFIX "/home/lattepanda/Matej_Pulec/car4_autonomous/car4_ws/install")
+  set(CMAKE_INSTALL_PREFIX "/home/mrmat420/car4_autonomous/car4_ws/install")
 endif()
 string(REGEX REPLACE "/$" "" CMAKE_INSTALL_PREFIX "${CMAKE_INSTALL_PREFIX}")
 
@@ -38,17 +38,17 @@ if(NOT DEFINED CMAKE_CROSSCOMPILING)
 endif()
 
 if("x${CMAKE_INSTALL_COMPONENT}x" STREQUAL "xUnspecifiedx" OR NOT CMAKE_INSTALL_COMPONENT)
-  file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/lib/pkgconfig" TYPE FILE FILES "/home/lattepanda/Matej_Pulec/car4_autonomous/car4_ws/build/imitation_learning/catkin_generated/installspace/imitation_learning.pc")
+  file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/lib/pkgconfig" TYPE FILE FILES "/home/mrmat420/car4_autonomous/car4_ws/build/imitation_learning/catkin_generated/installspace/imitation_learning.pc")
 endif()
 
 if("x${CMAKE_INSTALL_COMPONENT}x" STREQUAL "xUnspecifiedx" OR NOT CMAKE_INSTALL_COMPONENT)
   file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/share/imitation_learning/cmake" TYPE FILE FILES
-    "/home/lattepanda/Matej_Pulec/car4_autonomous/car4_ws/build/imitation_learning/catkin_generated/installspace/imitation_learningConfig.cmake"
-    "/home/lattepanda/Matej_Pulec/car4_autonomous/car4_ws/build/imitation_learning/catkin_generated/installspace/imitation_learningConfig-version.cmake"
+    "/home/mrmat420/car4_autonomous/car4_ws/build/imitation_learning/catkin_generated/installspace/imitation_learningConfig.cmake"
+    "/home/mrmat420/car4_autonomous/car4_ws/build/imitation_learning/catkin_generated/installspace/imitation_learningConfig-version.cmake"
     )
 endif()
 
 if("x${CMAKE_INSTALL_COMPONENT}x" STREQUAL "xUnspecifiedx" OR NOT CMAKE_INSTALL_COMPONENT)
-  file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/share/imitation_learning" TYPE FILE FILES "/home/lattepanda/Matej_Pulec/car4_autonomous/car4_ws/src/imitation_learning/package.xml")
+  file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/share/imitation_learning" TYPE FILE FILES "/home/mrmat420/car4_autonomous/car4_ws/src/imitation_learning/package.xml")
 endif()
 

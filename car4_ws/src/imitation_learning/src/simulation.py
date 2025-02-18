@@ -399,10 +399,10 @@ class SimulationNode():
                             for x, y in self.ok_position if 500 <= x <= 2600]
 
         # Initialize Pygame and the Joystick
-        # pygame.init()
-        # joystick = pygame.joystick.Joystick(0)
-        # joystick.init()
-        # print(f"Gamepad connected: {joystick.get_name()}")
+        pygame.init()
+        joystick = pygame.joystick.Joystick(0)
+        joystick.init()
+        print(f"Gamepad connected: {joystick.get_name()}")
 
         # Initial state
         self.position = [150, 500]
@@ -434,9 +434,9 @@ class SimulationNode():
             i += 1
 
             if self.user_control == 1:
-                # pygame.event.pump()
-                # self.speed_stick = joystick.get_axis(1)
-                # self.turning_stick = joystick.get_axis(2)
+                pygame.event.pump()
+                self.speed_stick = joystick.get_axis(1)
+                self.turning_stick = joystick.get_axis(2)
                 pass
             else:
                 if self.control_vector == []:

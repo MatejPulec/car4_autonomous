@@ -22,7 +22,8 @@ class LocalDriverNode:
     def __init__(self):
         # Potential field
         self.range_threshold = 0.5
-        self.repulsive_coef = 3
+        self.repulsive_coef = 0.1
+        self.repulsive_coef_linear = 100
         self.safety_bouble_radius = 0.25
 
         # disparity extender
@@ -37,7 +38,7 @@ class LocalDriverNode:
         model_class_path = os.path.join(
             current_directory, "../../imitation_learning/trained_model_class")
         self.loaded_model_class = tf.keras.models.load_model(model_class_path)
-        
+
         self.previous_speed = 0
         self.speed = 127
         self.min_speed = 20
@@ -55,7 +56,7 @@ class LocalDriverNode:
         self.path_subscriber = rospy.Subscriber(
             "/point_to_follow_angle_distance", Float64MultiArray, self.angle_distance_callback)
         self.scan_subscriber = rospy.Subscriber(
-            "/scan", LaserScan, self.neural_network_callback)
+            "/scan", LaserScan, self.potential_field_callback)
         self.control_vector_publisher = rospy.Publisher(
             "/control_vector", Int32MultiArray, queue_size=10)
         self.visible_finish_flag_subscriber = rospy.Subscriber(
@@ -79,45 +80,55 @@ class LocalDriverNode:
             return
 
         attractive_force_vector = 100 * \
-            np.array([np.sin(self.goal_angle)*-1, np.cos(self.goal_angle)])
+            np.array([np.sin(self.goal_angle), np.cos(self.goal_angle)])
+
         repulsive_force_vector = np.array([0.0, 0.0])
 
         if not hasattr(self, 'laser_angles'):
             self.laser_angles = np.arange(msg.angle_max, msg.angle_min -
                                           msg.angle_increment, -msg.angle_increment)
 
-        # if not hasattr(self, 'laser_angles_no_offset'):
-        #     self.laser_angles_no_offset = np.arange(msg.angle_max, msg.angle_min -
-        #                              msg.angle_increment, -msg.angle_increment)
+        if not hasattr(self, 'laser_angles_no_offset'):
+            self.laser_angles_no_offset = np.arange(msg.angle_max, msg.angle_min -
+                                                    msg.angle_increment, -msg.angle_increment)
 
-        # self.laser_ranges = [float('nan') if r < 0.05 else r for r in msg.ranges]
+        self.laser_ranges = [4 if r < 0.05 else r for r in msg.ranges]
 
-        # self.laser_ranges, self.laser_angles = self.offset_points(self.laser_ranges, self.laser_angles_no_offset, 0.33)
+        self.laser_ranges, self.laser_angles = self.offset_points(
+            self.laser_ranges, self.laser_angles_no_offset, 0.25)
 
-        # self.laser_ranges = self.local_minima_with_radius(self.laser_ranges, 20)
+        self.laser_ranges = self.local_minima_with_radius(
+            self.laser_ranges, 50)
 
-        # self.laser_ranges = np.array(self.laser_ranges)
-        # self.laser_ranges -= self.safety_bouble_radius
+        self.laser_ranges = np.array(self.laser_ranges)
+        self.laser_ranges -= self.safety_bouble_radius
 
-        # for range, laser_angle in zip(self.laser_ranges, self.laser_angles):
+        # for range, laser_angle in zip(msg.ranges, self.laser_angles)::
 
-        for range, laser_angle in zip(msg.ranges, self.laser_angles):
+        for range, laser_angle in zip(self.laser_ranges, self.laser_angles):
             if range < self.range_threshold and range > 0.05:
                 # diff of 1/2 n (1/x - 1/t)**2
-                repulsive_intensity = self.repulsive_coef * \
-                    (self.range_threshold-range) / \
-                    (self.range_threshold*range**3)
+
+                # repulsive_intensity = self.repulsive_coef * \
+                #     (1/self.range_threshold-1/range) * \
+                #     1/range**2
+
+                repulsive_intensity = (
+                    self.range_threshold - range)*(self.repulsive_coef_linear/self.range_threshold)*-1
+
                 repulsive_delta = repulsive_intensity * \
                     np.array([np.sin(laser_angle), np.cos(laser_angle)])
                 repulsive_force_vector = np.add(
                     repulsive_force_vector, repulsive_delta)
 
-        total_vector = attractive_force_vector - repulsive_force_vector
+        total_vector = attractive_force_vector + repulsive_force_vector
         total_angle = np.arctan2(total_vector[0], total_vector[1])
 
-        speed, dir = self.dir_to_control(total_angle)
+        rospy.logwarn(repulsive_force_vector)
 
-        control_vector = [99, 0, int(dir), int(speed), 0]
+        forward, dir = self.dir_to_control(total_angle)
+
+        control_vector = [99, 0, int(dir), int(127+30*forward), 0]
         msg = Int32MultiArray()
         msg.data = control_vector
         self.control_vector_publisher.publish(msg)
@@ -178,59 +189,65 @@ class LocalDriverNode:
 
         candidate_angles = set()
 
-
         # Next, search for disparities and add those angles
         for idx in range(len(masked_out_ranges) - 1):
             if abs(masked_out_ranges[idx + 1] - masked_out_ranges[idx]) > disparity_TH:
                 # Choose the angle corresponding to the greater distance
                 if masked_out_ranges[idx + 1] > masked_out_ranges[idx]:
-                    candidate_angles.add((self.laser_angles[idx + 1], masked_out_ranges[idx + 1]))
+                    candidate_angles.add(
+                        (self.laser_angles[idx + 1], masked_out_ranges[idx + 1]))
                 else:
-                    candidate_angles.add((self.laser_angles[idx], masked_out_ranges[idx]))
+                    candidate_angles.add(
+                        (self.laser_angles[idx], masked_out_ranges[idx]))
 
         if self.visible_finish_flag == True:
 
-                    # First, consider angles with sufficient range
+            # First, consider angles with sufficient range
             for idx, masked_range in enumerate(masked_out_ranges):
                 if masked_range >= self.goal_distance:  # Check if the distance exceeds the threshold
-                    candidate_angles.add((self.laser_angles[idx], masked_range))
+                    candidate_angles.add(
+                        (self.laser_angles[idx], masked_range))
 
             if len(candidate_angles) == 0:
-                candidate_angles = [(angle, rng) for angle, rng in zip(self.laser_angles, masked_out_ranges)]
-            
+                candidate_angles = [(angle, rng) for angle, rng in zip(
+                    self.laser_angles, masked_out_ranges)]
+
             candidate_angles = sorted(candidate_angles, key=lambda x: x[0])
 
             # Compute the angular distance to the goal angle for each candidate
-            angular_distances = [abs(angle - self.goal_angle) for angle, _ in candidate_angles]
-            
+            angular_distances = [abs(angle - self.goal_angle)
+                                 for angle, _ in candidate_angles]
+
             # Select the candidate with the smallest angular distance to the goal
-            best_angle = list(candidate_angles)[np.argmin(angular_distances)][0]
+            best_angle = list(candidate_angles)[
+                np.argmin(angular_distances)][0]
 
             forward, dir = self.dir_to_control(best_angle)
 
             target_speed = 127 + self.min_speed
             if forward == -1:
                 target_speed = 127 - self.min_speed
-                
+
         else:
 
             # First, consider angles with sufficient range
             for idx, masked_range in enumerate(masked_out_ranges):
                 if masked_range > self.distance_threshold:  # Check if the distance exceeds the threshold
-                    candidate_angles.add((self.laser_angles[idx], masked_range))
+                    candidate_angles.add(
+                        (self.laser_angles[idx], masked_range))
 
                 if len(candidate_angles) == 0:
-                    candidate_angles = set((angle, rng) for angle, rng in zip(self.laser_angles, masked_out_ranges))
-
+                    candidate_angles = set((angle, rng) for angle, rng in zip(
+                        self.laser_angles, masked_out_ranges))
 
             candidate_angles = sorted(candidate_angles, key=lambda x: x[0])
 
             # Attempt at using weights
             max_value = -np.inf
-            for angle,masked_range in candidate_angles:
+            for angle, masked_range in candidate_angles:
                 value = masked_range * \
-                    ((self.gauss_weight(angle - self.goal_angle))*self.gauss_weight(angle)**0)
-                    # (2*np.cos(angle - self.goal_angle)+np.cos(angle))
+                    ((self.gauss_weight(angle - self.goal_angle))
+                     * self.gauss_weight(angle)**0)
                 if value > max_value:
                     best_angle = angle
                     max_value = value
@@ -239,21 +256,24 @@ class LocalDriverNode:
 
             free_space_sum = 0
             for idx, masked_range in enumerate(masked_out_ranges):
-                free_space_sum = free_space_sum + masked_range * (self.gauss_weight(self.laser_angles[idx])*self.gauss_weight(self.laser_angles[idx]-self.goal_angle))
+                free_space_sum = free_space_sum + masked_range * \
+                    (self.gauss_weight(
+                        self.laser_angles[idx])*self.gauss_weight(self.laser_angles[idx]-self.goal_angle))
             free_space_sum = free_space_sum/len(masked_out_ranges)
-            
-            target_speed = 127 + np.clip(free_space_sum, 0.2, 1) * self.max_speed
-            
+
+            target_speed = 127 + \
+                np.clip(free_space_sum, 0.2, 1) * self.max_speed
+
             if forward == -1:
                 target_speed = 127 - self.min_speed
-
 
         current_update_time = time.monotonic()
         time_delta = current_update_time - self.last_update_time
         self.last_update_time = current_update_time
 
-        self.speed = self.speed + np.clip(target_speed-self.speed,-time_delta*self.speed_increment, time_delta*self.speed_increment)
-        rospy.logwarn(self.speed)
+        self.speed = self.speed + \
+            np.clip(target_speed-self.speed, -time_delta *
+                    self.speed_increment, time_delta*self.speed_increment)
         control_vector = [99, 0, int(dir), int(self.speed), 0]
         msg_to_send = Int32MultiArray()
         msg_to_send.data = control_vector
@@ -268,8 +288,7 @@ class LocalDriverNode:
 
         # best_angle_x = 4*-np.sin(best_angle)
         # best_angle_y = 4*np.cos(best_angle)
-        # plt.plot([0,best_angle_x],[0,best_angle_y])
-
+        # plt.plot([0, best_angle_x], [0, best_angle_y])
 
         # # Set plot limits
         # plt.xlim(-4, 4)
@@ -377,7 +396,7 @@ class LocalDriverNode:
 
             # Exclude the current element and check if it's the smallest in the neighborhood
 
-            if arr[i] < min(arr[start:i] + arr[i+1:end]):
+            if arr[i] <= min(arr[start:i] + arr[i+1:end]):
                 result[i] = arr[i]
 
         return result

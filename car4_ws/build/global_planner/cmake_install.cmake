@@ -1,8 +1,8 @@
-# Install script for directory: /home/lattepanda/Matej_Pulec/car4_autonomous/car4_ws/src/global_planner
+# Install script for directory: /home/mrmat420/car4_autonomous/car4_ws/src/global_planner
 
 # Set the install prefix
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)
-  set(CMAKE_INSTALL_PREFIX "/home/lattepanda/Matej_Pulec/car4_autonomous/car4_ws/install")
+  set(CMAKE_INSTALL_PREFIX "/home/mrmat420/car4_autonomous/car4_ws/install")
 endif()
 string(REGEX REPLACE "/$" "" CMAKE_INSTALL_PREFIX "${CMAKE_INSTALL_PREFIX}")
 
@@ -38,17 +38,17 @@ if(NOT DEFINED CMAKE_CROSSCOMPILING)
 endif()
 
 if("x${CMAKE_INSTALL_COMPONENT}x" STREQUAL "xUnspecifiedx" OR NOT CMAKE_INSTALL_COMPONENT)
-  file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/lib/pkgconfig" TYPE FILE FILES "/home/lattepanda/Matej_Pulec/car4_autonomous/car4_ws/build/global_planner/catkin_generated/installspace/global_planner.pc")
+  file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/lib/pkgconfig" TYPE FILE FILES "/home/mrmat420/car4_autonomous/car4_ws/build/global_planner/catkin_generated/installspace/global_planner.pc")
 endif()
 
 if("x${CMAKE_INSTALL_COMPONENT}x" STREQUAL "xUnspecifiedx" OR NOT CMAKE_INSTALL_COMPONENT)
   file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/share/global_planner/cmake" TYPE FILE FILES
-    "/home/lattepanda/Matej_Pulec/car4_autonomous/car4_ws/build/global_planner/catkin_generated/installspace/global_plannerConfig.cmake"
-    "/home/lattepanda/Matej_Pulec/car4_autonomous/car4_ws/build/global_planner/catkin_generated/installspace/global_plannerConfig-version.cmake"
+    "/home/mrmat420/car4_autonomous/car4_ws/build/global_planner/catkin_generated/installspace/global_plannerConfig.cmake"
+    "/home/mrmat420/car4_autonomous/car4_ws/build/global_planner/catkin_generated/installspace/global_plannerConfig-version.cmake"
     )
 endif()
 
 if("x${CMAKE_INSTALL_COMPONENT}x" STREQUAL "xUnspecifiedx" OR NOT CMAKE_INSTALL_COMPONENT)
-  file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/share/global_planner" TYPE FILE FILES "/home/lattepanda/Matej_Pulec/car4_autonomous/car4_ws/src/global_planner/package.xml")
+  file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/share/global_planner" TYPE FILE FILES "/home/mrmat420/car4_autonomous/car4_ws/src/global_planner/package.xml")
 endif()
 
