@@ -30,6 +30,8 @@ class LocalDriverNode:
         self.disparity_threshold = 0.5
         self.distance_threshold = 1.5
 
+        self.callback_repetitions = 0
+
         # neural network
         current_directory = os.path.dirname(os.path.abspath(__file__))
         model_path = os.path.join(
@@ -42,7 +44,7 @@ class LocalDriverNode:
         self.previous_speed = 0
         self.speed = 127
         self.min_speed = 20
-        self.max_speed = 100
+        self.max_speed = 50
         self.speed_increment = 50
         self.last_update_time = time.monotonic()
 
@@ -56,7 +58,7 @@ class LocalDriverNode:
         self.path_subscriber = rospy.Subscriber(
             "/point_to_follow_angle_distance", Float64MultiArray, self.angle_distance_callback)
         self.scan_subscriber = rospy.Subscriber(
-            "/scan", LaserScan, self.potential_field_callback)
+            "/scan", LaserScan, self.disparity_extender_and_potential_field_callback)
         self.control_vector_publisher = rospy.Publisher(
             "/control_vector", Int32MultiArray, queue_size=10)
         self.visible_finish_flag_subscriber = rospy.Subscriber(
@@ -124,16 +126,25 @@ class LocalDriverNode:
         total_vector = attractive_force_vector + repulsive_force_vector
         total_angle = np.arctan2(total_vector[0], total_vector[1])
 
-        rospy.logwarn(repulsive_force_vector)
-
         forward, dir = self.dir_to_control(total_angle)
+        target_speed = int(127+30*forward)
 
-        control_vector = [99, 0, int(dir), int(127+30*forward), 0]
+        current_update_time = time.monotonic()
+        time_delta = current_update_time - self.last_update_time
+        self.last_update_time = current_update_time
+
+        self.speed = self.speed + \
+            np.clip(target_speed-self.speed, -time_delta *
+                    self.speed_increment, time_delta*self.speed_increment)
+        
+        control_vector = [99, 0, int(dir), int(self.speed), 0]
         msg = Int32MultiArray()
         msg.data = control_vector
         self.control_vector_publisher.publish(msg)
 
     def disparity_extender_callback(self, msg):
+
+        self.callback_repetitions +=1
 
         # self.goal_angle = 0
 
@@ -145,9 +156,9 @@ class LocalDriverNode:
                                           msg.angle_increment, -msg.angle_increment)
 
         # Retrieve raw LIDAR data
-        laser_ranges = np.array(msg.ranges)
-
         laser_ranges = [4 if r < 0.05 or r > 4 else r for r in msg.ranges]
+
+        laser_ranges = np.array(laser_ranges)#[::-1]        
 
         # get ranges
         ranges = deepcopy(laser_ranges)
@@ -279,27 +290,29 @@ class LocalDriverNode:
         msg_to_send.data = control_vector
         self.control_vector_publisher.publish(msg_to_send)
 
-        # plt.clf()  # Clear the previous plot
+        if self.callback_repetitions%10 == 1:
 
-        # # Convert polar coordinates to Cartesian
-        # lidar_x = masked_out_ranges * -np.sin(self.laser_angles)
-        # lidar_y = masked_out_ranges * np.cos(self.laser_angles)
-        # plt.plot(lidar_x, lidar_y, label='Masked Ranges', color='blue')
+            plt.clf()  # Clear the previous plot
 
-        # best_angle_x = 4*-np.sin(best_angle)
-        # best_angle_y = 4*np.cos(best_angle)
-        # plt.plot([0, best_angle_x], [0, best_angle_y])
+            # Convert polar coordinates to Cartesian
+            lidar_x = masked_out_ranges * -np.sin(self.laser_angles)
+            lidar_y = masked_out_ranges * np.cos(self.laser_angles)
+            plt.plot(lidar_x, lidar_y, label='Masked Ranges', color='blue')
 
-        # # Set plot limits
-        # plt.xlim(-4, 4)
-        # plt.ylim(-4, 4)
+            best_angle_x = 4*-np.sin(best_angle)
+            best_angle_y = 4*np.cos(best_angle)
+            plt.plot([0, best_angle_x], [0, best_angle_y])
 
-        # plt.xlabel('X (meters)')
-        # plt.ylabel('Y (meters)')
-        # plt.title('LIDAR Masked Ranges with Candidate Angles')
-        # plt.grid(True)
-        # plt.legend()
-        # plt.pause(0.001)
+            # Set plot limits
+            plt.xlim(-4, 4)
+            plt.ylim(-4, 4)
+
+            plt.xlabel('X (meters)')
+            plt.ylabel('Y (meters)')
+            plt.title('LIDAR Masked Ranges with Candidate Angles')
+            plt.grid(True)
+            plt.legend()
+            plt.pause(0.001)
 
     def disparity_extender_and_potential_field_callback(self, msg):
         if not hasattr(self, 'goal_angle'):
@@ -341,7 +354,6 @@ class LocalDriverNode:
         output = self.loaded_model_class.predict(input_data_normalized)
 
         predicted_class = np.argmax(output[0])
-        # rospy.logwarn(predicted_class)
         if predicted_class == 0:
             turning_stick = 0
             if output[0][1] > output[0][2]:

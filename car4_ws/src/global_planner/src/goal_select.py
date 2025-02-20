@@ -39,7 +39,7 @@ def path_callback(msg):
     path_x = []
     path_y = []
 
-    time.sleep(0.001)
+    time.sleep(0.0001)
 
     # Extract the coordinates from the Polygon message
     path_x = [point.x/0.025 for point in msg.points]
@@ -81,7 +81,7 @@ def onclick(event, ax):
 
 def update_pos():
     while not rospy.is_shutdown():
-        time.sleep(1)  # Run this function every second
+        time.sleep(2)  # Run this function every two seconds
         tf_listener.waitForTransform(
             "map", "base_link", rospy.Time(0), rospy.Duration(10.0))
         (translation, quaternion) = tf_listener.lookupTransform(
@@ -141,7 +141,7 @@ def main():
 
     # Spin in a separate thread while keeping the plot interactive
     plt.show()  # Non-blocking to allow ROS callbacks to work
-    plt.pause(0.001)
+    plt.pause(0.0001)
     rospy.spin()  # Keep the node running to receive messages
 
 

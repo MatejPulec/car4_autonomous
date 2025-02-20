@@ -399,10 +399,11 @@ class SimulationNode():
                             for x, y in self.ok_position if 500 <= x <= 2600]
 
         # Initialize Pygame and the Joystick
-        pygame.init()
-        joystick = pygame.joystick.Joystick(0)
-        joystick.init()
-        print(f"Gamepad connected: {joystick.get_name()}")
+        if self.user_control == 1:
+            pygame.init()
+            joystick = pygame.joystick.Joystick(0)
+            joystick.init()
+            print(f"Gamepad connected: {joystick.get_name()}")
 
         # Initial state
         self.position = [150, 500]
