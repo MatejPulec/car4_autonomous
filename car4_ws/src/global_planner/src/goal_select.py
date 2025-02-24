@@ -81,7 +81,7 @@ def onclick(event, ax):
 
 def update_pos():
     while not rospy.is_shutdown():
-        time.sleep(2)  # Run this function every two seconds
+        time.sleep(1)  # Run this function every two seconds
         tf_listener.waitForTransform(
             "map", "base_link", rospy.Time(0), rospy.Duration(10.0))
         (translation, quaternion) = tf_listener.lookupTransform(

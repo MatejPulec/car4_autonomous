@@ -446,15 +446,15 @@ class SimulationNode():
                 else:
                     self.speed_stick = (self.control_vector[3]-127)/-127
                     self.turning_stick = (self.control_vector[2]-127)/127
-                    if self.speed_stick > 0:
-                        self.speed_stick = 1
-                    if self.speed_stick < 0:
-                        self.speed_stick = -1
+                    # if self.speed_stick > 0:
+                    #     self.speed_stick = 1
+                    # if self.speed_stick < 0:
+                    #     self.speed_stick = -1
             if abs(self.speed_stick) < 0.05:
                 self.speed_stick = 0
             if abs(self.turning_stick) < 0.05:
                 self.turning_stick = 0
-            speed = -self.speed_stick * 60
+            speed = -self.speed_stick * 120
             turning_radius = -lookup(self.turning_stick *
                                      4, self.lookup_in, self.lookup_out)
 
@@ -557,16 +557,15 @@ class SimulationNode():
 
     def generate_scan(self):
         """Generate lidar scan using ray tracing."""
-        self.laser_angles = np.linspace(-(self.LIDAR_ANGLE/2), (self.LIDAR_ANGLE/2),
+        self.laser_angles = np.linspace((self.LIDAR_ANGLE/2), -(self.LIDAR_ANGLE/2),
                                         self.LIDAR_NUMBER_OF_POINTS)
         self.laser_angles = np.deg2rad(self.laser_angles)
         self.laser_ranges = np.zeros(self.LIDAR_NUMBER_OF_POINTS)
         max_range = 4 / self.resolution
-        compensation_angle = 0
         for i, a in enumerate(self.laser_angles):
             # Calculate the direction vector based on the lidar angle
             direction = np.array(
-                [np.cos(a + self.angle + compensation_angle), np.sin(a + self.angle + compensation_angle)])
+                [np.cos(a + self.angle), np.sin(a + self.angle)])
             end_pos = self.position + max_range * direction
             max_pos = [self.map.shape[1]-1, self.map.shape[0]-1]
             min_pos = [0, 0]

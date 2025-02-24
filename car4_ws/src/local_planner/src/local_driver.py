@@ -136,7 +136,13 @@ class LocalDriverNode:
         self.speed = self.speed + \
             np.clip(target_speed-self.speed, -time_delta *
                     self.speed_increment, time_delta*self.speed_increment)
-        
+
+        if self.speed > 127-self.min_speed and self.speed < 127+self.min_speed:
+            if forward == 1:
+                self.speed = 127 + self.min_speed
+            else:
+                self.speed == 127 - self.min_speed
+
         control_vector = [99, 0, int(dir), int(self.speed), 0]
         msg = Int32MultiArray()
         msg.data = control_vector
@@ -144,7 +150,7 @@ class LocalDriverNode:
 
     def disparity_extender_callback(self, msg):
 
-        self.callback_repetitions +=1
+        self.callback_repetitions += 1
 
         # self.goal_angle = 0
 
@@ -158,7 +164,7 @@ class LocalDriverNode:
         # Retrieve raw LIDAR data
         laser_ranges = [4 if r < 0.05 or r > 4 else r for r in msg.ranges]
 
-        laser_ranges = np.array(laser_ranges)#[::-1]        
+        laser_ranges = np.array(laser_ranges)  # [::-1]
 
         # get ranges
         ranges = deepcopy(laser_ranges)
@@ -273,7 +279,8 @@ class LocalDriverNode:
             free_space_sum = free_space_sum/len(masked_out_ranges)
 
             target_speed = 127 + \
-                np.clip(free_space_sum, 0.2, 1) * self.max_speed
+                np.clip(free_space_sum * self.max_speed,
+                        self.min_speed, self.max_speed)
 
             if forward == -1:
                 target_speed = 127 - self.min_speed
@@ -285,12 +292,19 @@ class LocalDriverNode:
         self.speed = self.speed + \
             np.clip(target_speed-self.speed, -time_delta *
                     self.speed_increment, time_delta*self.speed_increment)
+
+        if self.speed > 127-self.min_speed and self.speed < 127+self.min_speed:
+            if forward == 1:
+                self.speed = 127 + self.min_speed
+            else:
+                self.speed == 127 - self.min_speed
+
         control_vector = [99, 0, int(dir), int(self.speed), 0]
         msg_to_send = Int32MultiArray()
         msg_to_send.data = control_vector
         self.control_vector_publisher.publish(msg_to_send)
 
-        if self.callback_repetitions%10 == 1:
+        if self.callback_repetitions % 10 == 1:
 
             plt.clf()  # Clear the previous plot
 

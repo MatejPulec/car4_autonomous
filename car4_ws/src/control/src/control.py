@@ -11,6 +11,7 @@ import sys
 from std_msgs.msg import Int32MultiArray
 from sensor_msgs.msg import LaserScan
 
+
 class ControlNode:
     def __init__(self):
 
@@ -21,16 +22,16 @@ class ControlNode:
         self.ser_ftdi = self.setting_serial_PC_PIC()
 
         # Set up subscriber and publisher
-        self.path_subscriber = rospy.Subscriber("/control_vector", Int32MultiArray, self.control_vector_callback)
+        self.path_subscriber = rospy.Subscriber(
+            "/control_vector", Int32MultiArray, self.control_vector_callback)
 
         # Set up interrupt handling for clean exit
         signal.signal(signal.SIGINT, self.handle_interrupt)
 
-    def control_vector_callback(self,msg):
+    def control_vector_callback(self, msg):
         packed_data = self.prepare_data_to_PIC33(list(msg.data))
         self.ser_ftdi.write(packed_data)
         # rospy.logwarn(msg)
-
 
     def setting_serial_PC_PIC(self):
         # Configure the serial port to SEND data
@@ -69,6 +70,7 @@ class ControlNode:
             self.ser_ftdi.close()
 
         sys.exit(0)
+
 
 if __name__ == "__main__":
     try:

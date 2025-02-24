@@ -6,26 +6,36 @@
     <node pkg="tf" type="static_transform_publisher" name="static_tf_publisher_lidar" output="screen"
           args="0.3245 0 0 0 0 0 base_link lidar_frame 100" />
 
+    <!-- no rate -->
     <node pkg="odometry" type="car4_odometry_calculator.py" name="odometry_calculator" />
 
+    <!-- 100 hz -->
     <node pkg="odometry" type="car4_data_publisher_online.py" name="data_publisher">
         <param name="hz" value="$(arg rate)" />
     </node>
 
+    <!-- 10hz -->
     <node pkg="amcl" type="position_estimator.py" name="position_estimator" />
 
+    <!-- 10hz -->
     <node pkg="laser" type="laser_data_publisher_online.py" name="laser_data_publisher" />
 
+    <!-- broadcast 10hz, rest in while 1 -->
     <node pkg="amcl" type="AMCL.py" name="AMCL" />
 
+    <!-- 1hz -->
     <node pkg="global_planner" type="goal_select.py" name="goal_select" />
 
+    <!-- only callback -->
     <node pkg="global_planner" type="RRT_star.py" name="RRT_star" />
-
+    
+    <!-- 2hz -->
     <node pkg="global_planner" type="global_driver.py" name="global_driver" />
 
+    <!-- 10hz response to scan -->
     <node pkg="local_planner" type="local_driver.py" name="local_driver" />
 
+    <!-- only callback -->
     <node pkg="control" type="control.py" name="control_node" />
 
 </launch>
