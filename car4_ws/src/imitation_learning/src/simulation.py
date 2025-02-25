@@ -565,7 +565,7 @@ class SimulationNode():
         for i, a in enumerate(self.laser_angles):
             # Calculate the direction vector based on the lidar angle
             direction = np.array(
-                [np.cos(a + self.angle), np.sin(a + self.angle)])
+                [np.cos(-a + self.angle), np.sin(-a + self.angle)])
             end_pos = self.position + max_range * direction
             max_pos = [self.map.shape[1]-1, self.map.shape[0]-1]
             min_pos = [0, 0]

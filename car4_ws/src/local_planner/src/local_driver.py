@@ -28,7 +28,7 @@ class LocalDriverNode:
 
         # disparity extender
         self.disparity_threshold = 0.5
-        self.distance_threshold = 1.5
+        self.distance_threshold = 0.5
 
         self.callback_repetitions = 0
 
@@ -86,18 +86,12 @@ class LocalDriverNode:
 
         repulsive_force_vector = np.array([0.0, 0.0])
 
-        if not hasattr(self, 'laser_angles'):
-            self.laser_angles = np.arange(msg.angle_max, msg.angle_min -
-                                          msg.angle_increment, -msg.angle_increment)
-
-        if not hasattr(self, 'laser_angles_no_offset'):
-            self.laser_angles_no_offset = np.arange(msg.angle_max, msg.angle_min -
-                                                    msg.angle_increment, -msg.angle_increment)
+        self.laser_angles = np.arange(msg.angle_min -msg.angle_increment, msg.angle_max, msg.angle_increment)
 
         self.laser_ranges = [4 if r < 0.05 else r for r in msg.ranges]
 
         self.laser_ranges, self.laser_angles = self.offset_points(
-            self.laser_ranges, self.laser_angles_no_offset, 0.25)
+            self.laser_ranges, self.laser_angles, 0.25)
 
         self.laser_ranges = self.local_minima_with_radius(
             self.laser_ranges, 50)
@@ -157,21 +151,26 @@ class LocalDriverNode:
         if not hasattr(self, 'goal_angle'):
             return
 
-        if not hasattr(self, 'laser_angles'):
-            self.laser_angles = np.arange(msg.angle_max, msg.angle_min -
-                                          msg.angle_increment, -msg.angle_increment)
+        self.laser_angles = np.arange(msg.angle_min -msg.angle_increment, msg.angle_max, msg.angle_increment)
 
         # Retrieve raw LIDAR data
-        laser_ranges = [4 if r < 0.05 or r > 4 else r for r in msg.ranges]
+        self.laser_ranges = [4 if r < 0.05 or r > 4 else r for r in msg.ranges]
 
-        laser_ranges = np.array(laser_ranges)  # [::-1]
+        self.laser_ranges = np.array(self.laser_ranges)  # [::-1]
+
+        self.laser_ranges, self.laser_angles = self.offset_points(self.laser_ranges, self.laser_angles, 0.33)
+
+        self.laser_ranges, self.laser_angles = self.filter_angles(self.laser_ranges, self.laser_angles)
+
+
+        #now check witch ones are ok
 
         # get ranges
-        ranges = deepcopy(laser_ranges)
+        ranges = deepcopy(self.laser_ranges)
         masked_out_ranges = deepcopy(ranges)
         # find disparities
-        disparity_TH = 0.2     # I hope its in meters
-        car_safety_bbl = 0.5    # I really hope its meters
+        disparity_TH = 0.4     # I hope its in meters
+        car_safety_bbl = 0.3    # I really hope its meters, should haft of car width
 
         for idx, rng in enumerate(ranges):
 
@@ -181,28 +180,45 @@ class LocalDriverNode:
                     # calculates the angle for the safety bubble based on distance
                     angle = 2 * \
                         math.asin((car_safety_bbl/2) /
-                                  max(rng, car_safety_bbl/2))
+                                  (rng))
 
-                    # calculates number of laser samples
-                    mask_N = math.ceil(angle / msg.angle_increment)
+                    # # calculates number of laser samples
+                    # mask_N = math.ceil(angle / msg.angle_increment)
 
-                    # decreases the range to rng
-                    for i in range(idx, min(len(ranges)-1, idx + mask_N)):
-                        if masked_out_ranges[i] > rng:
-                            masked_out_ranges[i] = rng
+                    # # decreases the range to rng
+                    # for i in range(idx, min(len(ranges)-1, idx + mask_N)):
+                    #     if masked_out_ranges[i] > rng:
+                    #         masked_out_ranges[i] = rng
+
+                    current_angle = self.laser_angles[idx]
+                    i = 0
+
+                    while idx + i < len(self.laser_angles) and self.laser_angles[idx + i] < current_angle + angle:
+                        if masked_out_ranges[idx + i] > rng:
+                            masked_out_ranges[idx + i] = rng
+                        i += 1
+
 
             # to the left
             if idx > 0:  # gives error for first element
                 if (ranges[idx-1] - ranges[idx]) > disparity_TH:
                     angle = 2 * \
                         math.asin((car_safety_bbl/2) /
-                                  max(rng, car_safety_bbl/2))
+                                  (rng))
 
-                    mask_N = math.ceil(angle / msg.angle_increment)
+                    # mask_N = math.ceil(angle / msg.angle_increment)
 
-                    for i in range(max(0, idx - mask_N), idx):
-                        if masked_out_ranges[i] > rng:
-                            masked_out_ranges[i] = rng
+                    # for i in range(max(0, idx - mask_N), idx):
+                    #     if masked_out_ranges[i] > rng:
+                    #         masked_out_ranges[i] = rng
+
+                    current_angle = self.laser_angles[idx]
+                    i = 0
+
+                    while idx - i >= 0 and self.laser_angles[idx - i] > current_angle - angle:
+                        if masked_out_ranges[idx - i] > rng:
+                            masked_out_ranges[idx - i] = rng
+                        i += 1
 
         candidate_angles = set()
 
@@ -299,7 +315,7 @@ class LocalDriverNode:
             else:
                 self.speed == 127 - self.min_speed
 
-        control_vector = [99, 0, int(dir), int(self.speed), 0]
+        control_vector = [99, 0, int(dir), int(127+forward*30), 0]
         msg_to_send = Int32MultiArray()
         msg_to_send.data = control_vector
         self.control_vector_publisher.publish(msg_to_send)
@@ -337,6 +353,8 @@ class LocalDriverNode:
             self.disparity_extender_callback(msg)
 
     def neural_network_callback(self, msg):
+        if not hasattr(self, 'goal_angle'):
+            return
         laser_ranges = np.array(msg.ranges)
         input_data = np.concatenate(
             (laser_ranges, [self.goal_angle, self.goal_distance]))
@@ -356,6 +374,8 @@ class LocalDriverNode:
         self.control_vector_publisher.publish(msg_to_send)
 
     def neural_network_class_callback(self, msg):
+        if not hasattr(self, 'goal_angle'):
+            return
         laser_ranges = np.array(msg.ranges)
         input_data = np.concatenate(
             (laser_ranges, [self.goal_angle, self.goal_distance]))
@@ -440,7 +460,27 @@ class LocalDriverNode:
         offset_angles = np.arctan2(y, x)
 
         return offset_distances, offset_angles
+    
+    def filter_angles(self, laser_ranges, laser_angles):
+        # Find index of the angle closest to zero
+        zero_index = np.argmin(np.abs(laser_angles))    #341/342
 
+        # Process negative to zero (strictly increasing)
+        mask = np.zeros(len(laser_angles), dtype=bool)
+        prev_angle = float('-inf')
+        for i in range(zero_index + 1):
+            if laser_angles[i] > prev_angle:  # Ensure strictly increasing
+                mask[i] = True
+                prev_angle = laser_angles[i]
+
+        # Process positive to zero (strictly decreasing)
+        prev_angle = float('inf')
+        for i in range(len(laser_angles) - 1, zero_index, -1):
+            if laser_angles[i] < prev_angle:  # Ensure strictly decreasing
+                mask[i] = True
+                prev_angle = laser_angles[i]
+
+        return laser_ranges[mask], laser_angles[mask]
 
 if __name__ == "__main__":
     try:

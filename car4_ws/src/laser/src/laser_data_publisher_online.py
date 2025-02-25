@@ -38,7 +38,7 @@ def talker(laser: hokuyo.Hokuyo):
         rate.sleep()
 
 if __name__ == '__main__':
-    uart_port_laser = '/dev/ttyACM0'
+    uart_port_laser = "/dev/serial/by-id/usb-Hokuyo_Data_Flex_for_USB_URG-Series_USB_Driver-if00"
     uart_speed_laser = 19200
     draw_laser = 0
 

@@ -42,13 +42,13 @@ class KeyControlNode:
                 keys = pygame.key.get_pressed()
 
                 if keys[pygame.K_UP]:
-                    control_vector = [99, 0, 127, 200, 0]  # Forward
+                    control_vector = [99, 0, 127, 180, 0]  # Forward
                 elif keys[pygame.K_LEFT]:
-                    control_vector = [99, 0, 2, 200, 0]    # Left
+                    control_vector = [99, 0, 2, 180, 0]    # Left
                 elif keys[pygame.K_RIGHT]:
-                    control_vector = [99, 0, 253, 200, 0]  # Right
+                    control_vector = [99, 0, 253, 170, 0]  # Right
                 elif keys[pygame.K_DOWN]:
-                    control_vector = [99, 0, 127, 100, 0]  # Backward
+                    control_vector = [99, 0, 127, 90, 0]  # Backward
                 else:
                     control_vector = self.default_vector   # Default when no key is pressed
 

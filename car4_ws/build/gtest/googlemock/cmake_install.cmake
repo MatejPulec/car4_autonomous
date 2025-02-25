@@ -2,7 +2,7 @@
 
 # Set the install prefix
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)
-  set(CMAKE_INSTALL_PREFIX "/home/mrmat420/car4_autonomous/car4_ws/install")
+  set(CMAKE_INSTALL_PREFIX "/home/lattepanda/Matej_Pulec/car4_autonomous/car4_ws/install")
 endif()
 string(REGEX REPLACE "/$" "" CMAKE_INSTALL_PREFIX "${CMAKE_INSTALL_PREFIX}")
 
@@ -39,7 +39,7 @@ endif()
 
 if(NOT CMAKE_INSTALL_LOCAL_ONLY)
   # Include the install script for each subdirectory.
-  include("/home/mrmat420/car4_autonomous/car4_ws/build/gtest/googletest/cmake_install.cmake")
+  include("/home/lattepanda/Matej_Pulec/car4_autonomous/car4_ws/build/gtest/googletest/cmake_install.cmake")
 
 endif()
 

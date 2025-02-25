@@ -13,7 +13,7 @@ from rospy.numpy_msg import numpy_msg
 
 def setting_serial_PC_PIC():
     # Configure the serial port to SEND data
-    port = '/dev/ttyUSB1'  # Change this to match your serial port on Ubuntu
+    port = "/dev/serial/by-id/usb-FTDI_FT231X_USB_UART_DN03FSC5-if00-port0"  # Change this to match your serial port on Ubuntu
     baud_rate = 115200  # Set your baudrate
     timeout = 1  # Set timeout value, if needed
     parity = serial.PARITY_ODD  # Set parity to odd
