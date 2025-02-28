@@ -21,10 +21,9 @@ import time
 class LocalDriverNode:
     def __init__(self):
         # Potential field
-        self.range_threshold = 0.5
+        self.range_threshold = 1
         self.repulsive_coef = 0.1
         self.repulsive_coef_linear = 100
-        self.safety_bouble_radius = 0.25
 
         # disparity extender
         self.disparity_threshold = 0.5
@@ -58,7 +57,7 @@ class LocalDriverNode:
         self.path_subscriber = rospy.Subscriber(
             "/point_to_follow_angle_distance", Float64MultiArray, self.angle_distance_callback)
         self.scan_subscriber = rospy.Subscriber(
-            "/scan", LaserScan, self.disparity_extender_and_potential_field_callback)
+            "/scan", LaserScan, self.potential_field_callback)
         self.control_vector_publisher = rospy.Publisher(
             "/control_vector", Int32MultiArray, queue_size=10)
         self.visible_finish_flag_subscriber = rospy.Subscriber(
@@ -77,70 +76,79 @@ class LocalDriverNode:
 
     # Potential field
     def potential_field_callback(self, msg):
-
         if not hasattr(self, 'goal_angle'):
             return
 
-        attractive_force_vector = 100 * \
-            np.array([np.sin(self.goal_angle), np.cos(self.goal_angle)])
-
+        attractive_force_vector = 100 * np.array([np.sin(self.goal_angle), np.cos(self.goal_angle)])
         repulsive_force_vector = np.array([0.0, 0.0])
 
-        self.laser_angles = np.arange(msg.angle_min -msg.angle_increment, msg.angle_max, msg.angle_increment)
-
+        self.laser_angles = np.arange(msg.angle_min - msg.angle_increment, msg.angle_max, msg.angle_increment)
         self.laser_ranges = [4 if r < 0.05 else r for r in msg.ranges]
 
-        self.laser_ranges, self.laser_angles = self.offset_points(
-            self.laser_ranges, self.laser_angles, 0.25)
+        # self.laser_ranges, self.laser_angles = self.offset_points(self.laser_ranges, self.laser_angles, 0.25)
+        self.laser_ranges = self.local_minima_with_radius(self.laser_ranges, 50)
 
-        self.laser_ranges = self.local_minima_with_radius(
-            self.laser_ranges, 50)
-
-        self.laser_ranges = np.array(self.laser_ranges)
-        self.laser_ranges -= self.safety_bouble_radius
-
-        # for range, laser_angle in zip(msg.ranges, self.laser_angles)::
+        lidar_points = []
+        local_minima_points = []
 
         for range, laser_angle in zip(self.laser_ranges, self.laser_angles):
+            x, y = range * np.sin(laser_angle), range * np.cos(laser_angle)
+            lidar_points.append((x, y))
+
             if range < self.range_threshold and range > 0.05:
-                # diff of 1/2 n (1/x - 1/t)**2
-
-                # repulsive_intensity = self.repulsive_coef * \
-                #     (1/self.range_threshold-1/range) * \
-                #     1/range**2
-
-                repulsive_intensity = (
-                    self.range_threshold - range)*(self.repulsive_coef_linear/self.range_threshold)*-1
-
-                repulsive_delta = repulsive_intensity * \
-                    np.array([np.sin(laser_angle), np.cos(laser_angle)])
-                repulsive_force_vector = np.add(
-                    repulsive_force_vector, repulsive_delta)
+                repulsive_intensity = (self.range_threshold - range) * (self.repulsive_coef_linear / self.range_threshold) * -1
+                repulsive_delta = repulsive_intensity * np.array([np.sin(laser_angle), np.cos(laser_angle)])
+                repulsive_force_vector = np.add(repulsive_force_vector, repulsive_delta)
+                local_minima_points.append((x, y))
 
         total_vector = attractive_force_vector + repulsive_force_vector
         total_angle = np.arctan2(total_vector[0], total_vector[1])
 
         forward, dir = self.dir_to_control(total_angle)
-        target_speed = int(127+30*forward)
+        target_speed = int(127 + 30 * forward)
 
         current_update_time = time.monotonic()
         time_delta = current_update_time - self.last_update_time
         self.last_update_time = current_update_time
 
-        self.speed = self.speed + \
-            np.clip(target_speed-self.speed, -time_delta *
-                    self.speed_increment, time_delta*self.speed_increment)
+        self.speed = self.speed + np.clip(target_speed - self.speed, -time_delta * self.speed_increment, time_delta * self.speed_increment)
 
-        if self.speed > 127-self.min_speed and self.speed < 127+self.min_speed:
+        if self.speed > 127 - self.min_speed and self.speed < 127 + self.min_speed:
             if forward == 1:
                 self.speed = 127 + self.min_speed
             else:
-                self.speed == 127 - self.min_speed
+                self.speed = 127 - self.min_speed
 
-        control_vector = [99, 0, int(dir), int(self.speed), 0]
+        control_vector = [99, 0, int(dir), int(127 + forward * 30), 0]
         msg = Int32MultiArray()
         msg.data = control_vector
         self.control_vector_publisher.publish(msg)
+
+        # Visualization
+        plt.clf()
+        lidar_x, lidar_y = zip(*lidar_points)
+        minima_x, minima_y = zip(*local_minima_points) if local_minima_points else ([], [])
+        lidar_x = np.array(lidar_x)
+        lidar_y = np.array(lidar_y)
+        minima_x = np.array(minima_x)
+        minima_y = np.array(minima_y)
+        
+        plt.scatter(-1 * lidar_x, lidar_y, color='blue', label='LiDAR Scan')
+        plt.scatter(-1 * minima_x, minima_y, color='red', label='Local Minima')
+        
+        plt.quiver(0, 0, -1* attractive_force_vector[0], attractive_force_vector[1], color='green', angles='xy', scale_units='xy', scale=1, label='Attractive Force')
+        plt.quiver(0, 0, -1* repulsive_force_vector[0], repulsive_force_vector[1], color='purple', angles='xy', scale_units='xy', scale=1, label='Repulsive Force')
+        plt.quiver(0, 0, -1* total_vector[0], total_vector[1], color='black', angles='xy', scale_units='xy', scale=1, label='Resultant Force')
+
+        plt.xlim(-5, 5)
+        plt.ylim(-5, 5)
+        plt.xlabel("X (meters)")
+        plt.ylabel("Y (meters)")
+        plt.title("Potential Field Visualization")
+        plt.legend()
+        plt.grid()
+        plt.pause(0.001)
+
 
     def disparity_extender_callback(self, msg):
 
@@ -320,29 +328,29 @@ class LocalDriverNode:
         msg_to_send.data = control_vector
         self.control_vector_publisher.publish(msg_to_send)
 
-        if self.callback_repetitions % 10 == 1:
+        # if self.callback_repetitions % 10 == 1:
 
-            plt.clf()  # Clear the previous plot
+        #     plt.clf()  # Clear the previous plot
 
-            # Convert polar coordinates to Cartesian
-            lidar_x = masked_out_ranges * -np.sin(self.laser_angles)
-            lidar_y = masked_out_ranges * np.cos(self.laser_angles)
-            plt.plot(lidar_x, lidar_y, label='Masked Ranges', color='blue')
+        #     # Convert polar coordinates to Cartesian
+        #     lidar_x = masked_out_ranges * -np.sin(self.laser_angles)
+        #     lidar_y = masked_out_ranges * np.cos(self.laser_angles)
+        #     plt.plot(lidar_x, lidar_y, label='Masked Ranges', color='blue')
 
-            best_angle_x = 4*-np.sin(best_angle)
-            best_angle_y = 4*np.cos(best_angle)
-            plt.plot([0, best_angle_x], [0, best_angle_y])
+        #     best_angle_x = 4*-np.sin(best_angle)
+        #     best_angle_y = 4*np.cos(best_angle)
+        #     plt.plot([0, best_angle_x], [0, best_angle_y])
 
-            # Set plot limits
-            plt.xlim(-4, 4)
-            plt.ylim(-4, 4)
+        #     # Set plot limits
+        #     plt.xlim(-4, 4)
+        #     plt.ylim(-4, 4)
 
-            plt.xlabel('X (meters)')
-            plt.ylabel('Y (meters)')
-            plt.title('LIDAR Masked Ranges with Candidate Angles')
-            plt.grid(True)
-            plt.legend()
-            plt.pause(0.001)
+        #     plt.xlabel('X (meters)')
+        #     plt.ylabel('Y (meters)')
+        #     plt.title('LIDAR Masked Ranges with Candidate Angles')
+        #     plt.grid(True)
+        #     plt.legend()
+        #     plt.pause(0.001)
 
     def disparity_extender_and_potential_field_callback(self, msg):
         if not hasattr(self, 'goal_angle'):
@@ -433,7 +441,7 @@ class LocalDriverNode:
     def local_minima_with_radius(self, arr, r):
         arr = list(arr)
         n = len(arr)
-        result = [0] * n  # Initialize result with zeros
+        result = [4] * n  # Initialize result with zeros
 
         for i in range(n):
             # Define the start and end indices to check within radius r

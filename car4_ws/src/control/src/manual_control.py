@@ -40,15 +40,26 @@ class KeyControlNode:
 
                 # Check the state of all keys
                 keys = pygame.key.get_pressed()
+                if keys[pygame.K_LSHIFT]:
+                    speed = 80
+                else:
+                    speed = 50
+
 
                 if keys[pygame.K_UP]:
-                    control_vector = [99, 0, 127, 180, 0]  # Forward
-                elif keys[pygame.K_LEFT]:
-                    control_vector = [99, 0, 2, 180, 0]    # Left
-                elif keys[pygame.K_RIGHT]:
-                    control_vector = [99, 0, 253, 170, 0]  # Right
+                    if keys[pygame.K_LEFT]:
+                        control_vector = [99, 0, 2, 127 + speed, 0]
+                    elif keys[pygame.K_RIGHT]:
+                        control_vector = [99, 0, 253, 127 + speed, 0]
+                    else:
+                        control_vector = [99, 0, 127, 127 + speed, 0]  # Forward    
                 elif keys[pygame.K_DOWN]:
-                    control_vector = [99, 0, 127, 90, 0]  # Backward
+                    if keys[pygame.K_LEFT]:
+                        control_vector = [99, 0, 2, 127 - speed/1.85, 0]
+                    elif keys[pygame.K_RIGHT]:
+                        control_vector = [99, 0, 253, 127 - speed/1.85, 0]
+                    else:
+                        control_vector = [99, 0, 127, 127 - speed/1.85, 0]
                 else:
                     control_vector = self.default_vector   # Default when no key is pressed
 
