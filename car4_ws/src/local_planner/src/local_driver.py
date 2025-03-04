@@ -57,7 +57,7 @@ class LocalDriverNode:
         self.path_subscriber = rospy.Subscriber(
             "/point_to_follow_angle_distance", Float64MultiArray, self.angle_distance_callback)
         self.scan_subscriber = rospy.Subscriber(
-            "/scan", LaserScan, self.neural_network_class_callback)
+            "/scan", LaserScan, self.disparity_extender_callback)
         self.control_vector_publisher = rospy.Publisher(
             "/control_vector", Int32MultiArray, queue_size=10)
         self.visible_finish_flag_subscriber = rospy.Subscriber(

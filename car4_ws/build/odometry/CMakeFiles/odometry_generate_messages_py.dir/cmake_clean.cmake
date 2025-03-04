@@ -1,6 +1,6 @@
 file(REMOVE_RECURSE
-  "/home/mrmat420/car4_autonomous/car4_ws/devel/lib/python3/dist-packages/odometry/msg/_CarState.py"
-  "/home/mrmat420/car4_autonomous/car4_ws/devel/lib/python3/dist-packages/odometry/msg/__init__.py"
+  "/home/lattepanda/Matej_Pulec/car4_autonomous/car4_ws/devel/lib/python3/dist-packages/odometry/msg/_CarState.py"
+  "/home/lattepanda/Matej_Pulec/car4_autonomous/car4_ws/devel/lib/python3/dist-packages/odometry/msg/__init__.py"
   "CMakeFiles/odometry_generate_messages_py"
 )
 

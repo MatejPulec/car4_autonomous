@@ -64,7 +64,7 @@ class GlobalDriverNode:
         Continuously listens to the transformation between 'map' and 'base_link'.
         Runs in a separate thread and updates the 'position' and 'point_to_follow' variables.
         """
-        rate = rospy.Rate(2)  # Update tf 10 times per second (10 Hz)
+        rate = rospy.Rate(10)  # Update tf 10 times per second (10 Hz)
 
         while not rospy.is_shutdown():
             try:
