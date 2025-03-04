@@ -1,0 +1,4 @@
+<launch>
+    <node name="rosbag_record" pkg="rosbag" type="record" output="screen"
+          args="-a -o $(find car4_launch)/recordings/all_topics.bag" />
+</launch>
