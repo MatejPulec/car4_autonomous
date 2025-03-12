@@ -57,7 +57,7 @@ class LocalDriverNode:
         self.path_subscriber = rospy.Subscriber(
             "/point_to_follow_angle_distance", Float64MultiArray, self.angle_distance_callback)
         self.scan_subscriber = rospy.Subscriber(
-            "/scan", LaserScan, self.disparity_extender_callback)
+            "/scan", LaserScan, self.potential_field_callback)
         self.control_vector_publisher = rospy.Publisher(
             "/control_vector", Int32MultiArray, queue_size=10)
         self.visible_finish_flag_subscriber = rospy.Subscriber(
@@ -76,12 +76,17 @@ class LocalDriverNode:
 
     # Potential field
     def potential_field_callback(self, msg):
+
+        self.callback_repetitions += 1
+
         if not hasattr(self, 'goal_angle'):
             return
 
         attractive_force_vector = 100 * \
             np.array([np.sin(self.goal_angle), np.cos(self.goal_angle)])
         repulsive_force_vector = np.array([0.0, 0.0])
+
+        rospy.logwarn(msg.header)
 
         self.laser_angles = np.arange(
             msg.angle_min - msg.angle_increment, msg.angle_max, msg.angle_increment)
@@ -132,34 +137,35 @@ class LocalDriverNode:
         msg.data = control_vector
         self.control_vector_publisher.publish(msg)
 
+        self.callback_repetitions += 1
         # Visualization
-        plt.clf()
-        lidar_x, lidar_y = zip(*lidar_points)
-        minima_x, minima_y = zip(
-            *local_minima_points) if local_minima_points else ([], [])
-        lidar_x = np.array(lidar_x)
-        lidar_y = np.array(lidar_y)
-        minima_x = np.array(minima_x)
-        minima_y = np.array(minima_y)
+        if self.callback_repetitions % 20 == 0:
+            plt.clf()
+            lidar_x, lidar_y = zip(*lidar_points)
+            minima_x, minima_y = zip(
+                *local_minima_points) if local_minima_points else ([], [])
+            lidar_x = np.array(lidar_x)
+            lidar_y = np.array(lidar_y)
+            minima_x = np.array(minima_x)
+            minima_y = np.array(minima_y)
 
-        plt.scatter(-1 * lidar_x, lidar_y, color='blue', label='LiDAR Scan')
-        plt.scatter(-1 * minima_x, minima_y, color='red', label='Local Minima')
+            plt.scatter(-1 * minima_x, minima_y, color='red', label='Local Minima')
 
-        plt.quiver(0, 0, -1 * attractive_force_vector[0], attractive_force_vector[1],
-                   color='green', angles='xy', scale_units='xy', scale=1, label='Attractive Force')
-        plt.quiver(0, 0, -1 * repulsive_force_vector[0], repulsive_force_vector[1],
-                   color='purple', angles='xy', scale_units='xy', scale=1, label='Repulsive Force')
-        plt.quiver(0, 0, -1 * total_vector[0], total_vector[1], color='black',
-                   angles='xy', scale_units='xy', scale=1, label='Resultant Force')
+            plt.quiver(0, 0, -1 * attractive_force_vector[0] * 0.01, attractive_force_vector[1] * 0.01,
+                    color='green', angles='xy', scale_units='xy', scale=1, label='Attractive Force')
+            plt.quiver(0, 0, -1 * repulsive_force_vector[0] * 0.01, repulsive_force_vector[1] * 0.01,
+                    color='purple', angles='xy', scale_units='xy', scale=1, label='Repulsive Force')
+            plt.quiver(0, 0, -1 * total_vector[0] * 0.01, total_vector[1] * 0.01, color='black',
+                    angles='xy', scale_units='xy', scale=1, label='Resultant Force')
 
-        plt.xlim(-5, 5)
-        plt.ylim(-5, 5)
-        plt.xlabel("X (meters)")
-        plt.ylabel("Y (meters)")
-        plt.title("Potential Field Visualization")
-        plt.legend()
-        plt.grid()
-        plt.pause(0.001)
+            plt.xlim(-5, 5)
+            plt.ylim(-5, 5)
+            plt.xlabel("X (meters)")
+            plt.ylabel("Y (meters)")
+            plt.title("Potential Field Visualization")
+            plt.legend()
+            plt.grid()
+            plt.pause(0.001)
 
     def disparity_extender_callback(self, msg):
 

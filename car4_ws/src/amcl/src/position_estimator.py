@@ -14,32 +14,37 @@ tf_listener = tf.TransformListener()
 last_map_to_AMCL_translation = None
 last_map_to_AMCL_quaternion = None
 last_broadcast_time = None
+last_timestamp = None
 
 # Function to broadcast the transformation
 def broadcast_map_to_odom():
-    global last_map_to_AMCL_translation, last_map_to_AMCL_quaternion, last_broadcast_time
+    global last_map_to_AMCL_translation, last_map_to_AMCL_quaternion, last_timestamp
 
     try:
-        # Step 1: Get the current odom -> base_link transformation
+        #Get the time of last AMCL transform
         tf_listener.waitForTransform("odom", "base_link", rospy.Time(0), rospy.Duration(5.0))
-        (odom_to_base_translation, odom_to_base_quaternion) = tf_listener.lookupTransform("odom", "base_link", rospy.Time(0))
+        tf_listener.waitForTransform("map", "AMCL", rospy.Time(0), rospy.Duration(5.0))
+        transform_timestamp = tf_listener.getLatestCommonTime("map", "AMCL")
+
+
+        # Step 1: Get the current odom -> base_link transformation
+        (odom_to_base_translation, odom_to_base_quaternion) = tf_listener.lookupTransform("odom", "base_link", transform_timestamp)
 
         # Convert odom_to_base_quaternion to Euler angles to work with the yaw
         _, _, odom_to_base_yaw = tf.transformations.euler_from_quaternion(odom_to_base_quaternion)
 
         # Step 2: Get the map -> AMCL transformation
-        tf_listener.waitForTransform("map", "AMCL", rospy.Time(0), rospy.Duration(5.0))
-        (map_to_AMCL_translation, map_to_AMCL_quaternion) = tf_listener.lookupTransform("map", "AMCL", rospy.Time(0))
+        (map_to_AMCL_translation, map_to_AMCL_quaternion) = tf_listener.lookupTransform("map", "AMCL", transform_timestamp)
 
         # Check if the transformation or timestamp has changed
-        if (last_map_to_AMCL_translation != map_to_AMCL_translation or
-            last_map_to_AMCL_quaternion != map_to_AMCL_quaternion or
-            last_broadcast_time is None or rospy.Time.now() - last_broadcast_time > rospy.Duration(0.1)):
-            
+        #todo also chesk timestamp
+        if (last_timestamp != transform_timestamp or
+            last_timestamp is None):
+            last_timestamp = transform_timestamp
+
             # Update last transformation values and timestamp
             last_map_to_AMCL_translation = map_to_AMCL_translation
             last_map_to_AMCL_quaternion = map_to_AMCL_quaternion
-            last_broadcast_time = rospy.Time.now()
 
             # Convert map_to_AMCL_quaternion to Euler angles for yaw
             _, _, map_to_AMCL_yaw = tf.transformations.euler_from_quaternion(map_to_AMCL_quaternion)

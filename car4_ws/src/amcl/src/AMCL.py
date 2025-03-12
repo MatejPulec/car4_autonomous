@@ -328,21 +328,23 @@ latest_angle = None
 
 
 def send_tf_transformation(tf_broadcaster, resolution):
-    global latest_position, latest_angle
+    global latest_position, latest_angle, timestamp, ready_to_broadcast
     rate = rospy.Rate(10)  # 10 Hz
     while not rospy.is_shutdown():
-        if latest_position is not None and latest_angle is not None:
-            quaternion = tf.transformations.quaternion_from_euler(
-                0, 0, latest_angle * -1)
-            tf_broadcaster.sendTransform(
-                # Translation
-                (latest_position[0] * resolution,
-                 latest_position[1] * resolution * -1, 0),  # different axes
-                quaternion,
-                rospy.Time.now(),
-                "AMCL",  # Child frame
-                "map"  # Parent frame
-            )
+        if ready_to_broadcast:
+            if latest_position is not None and latest_angle is not None:
+                quaternion = tf.transformations.quaternion_from_euler(
+                    0, 0, latest_angle * -1)
+                tf_broadcaster.sendTransform(
+                    # Translation
+                    (latest_position[0] * resolution,
+                    latest_position[1] * resolution * -1, 0),  # different axes
+                    quaternion,
+                    timestamp,
+                    "AMCL",  # Child frame
+                    "map"  # Parent frame
+                )
+        ready_to_broadcast = 0
         rate.sleep()
 
 
@@ -405,10 +407,10 @@ def main():
     # Create a TF broadcaster
     tf_broadcaster = tf.TransformBroadcaster()
 
-    # Start the transformation sending thread
-    tf_thread = threading.Thread(
-        target=send_tf_transformation, args=(tf_broadcaster, resolution))
-    tf_thread.start()
+    # # Start the transformation sending thread
+    # tf_thread = threading.Thread(
+    #     target=send_tf_transformation, args=(tf_broadcaster, resolution))
+    # tf_thread.start()
 
     rospy.Subscriber('/position_reset', PoseStamped, position_reset_callback)
     reset_msg = []
@@ -444,6 +446,7 @@ def main():
         dy_local = car4_odom_dx * -s + car4_odom_dy * c
 
         laser_msg = rospy.wait_for_message('/scan', LaserScan)
+        timestamp = laser_msg.header.stamp
         laser_ranges = laser_msg.ranges
         if len(laser_angles) == 0:
             laser_angles = np.arange(laser_msg.angle_max, laser_msg.angle_min -
@@ -520,6 +523,19 @@ def main():
         latest_position = copy.deepcopy(particle_with_highest_weight.position)
         latest_angle = copy.deepcopy(particle_with_highest_weight.angle)
 
+        quaternion = tf.transformations.quaternion_from_euler(
+            0, 0, latest_angle * -1)
+        tf_broadcaster.sendTransform(
+            # Translation
+            (latest_position[0] * resolution,
+            latest_position[1] * resolution * -1, 0),  # different axes
+            quaternion,
+            timestamp,
+            "AMCL",  # Child frame
+            "map"  # Parent frame
+        )
+
+
         # quaternion = tf.transformations.quaternion_from_euler(
         #     0, 0, particle_with_highest_weight.angle)
         # tf_broadcaster.sendTransform(
@@ -567,7 +583,7 @@ def main():
     # y_est = [sublist[1] for sublist in pos_est]
     # plt.plot(x_est, y_est)
     # plt.show()
-    tf_thread.join()
+    # tf_thread.join()
 
 
 if __name__ == '__main__':
