@@ -3,7 +3,7 @@
     <arg name="rate" default="10" />
     
     <node pkg="tf" type="static_transform_publisher" name="static_tf_publisher_lidar" output="screen"
-          args="0.3245 0 0 0 0 0 base_link lidar_frame 100" />
+          args="0.3245 0 0 0 0 0 base_link lidar_frame 10" />
 
     <node pkg="global_planner" type="goal_select.py" name="goal_select" />
 

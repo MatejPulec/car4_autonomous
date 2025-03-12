@@ -284,9 +284,9 @@ def generate_scan(pos, angle, map, resolution, LIDAR_NUMBER_OF_POINTS, LIDAR_ANG
     angles = np.deg2rad(angles)
     distances = np.zeros(LIDAR_NUMBER_OF_POINTS)
     max_range = 4 / resolution
-    compensation_distance = 0.33 #lidar offset
+    compensation_distance = 0.33 / resolution  # lidar offset
     direction_straight = np.array([np.cos(angle), np.sin(angle)])
-    # pos = pos + compensation_distance * direction_straight
+    pos = pos + np.floor(compensation_distance * direction_straight)
     for i, a in enumerate(angles):
         # Calculate the direction vector based on the lidar angle
         direction = np.array(

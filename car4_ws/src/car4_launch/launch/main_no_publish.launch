@@ -1,0 +1,13 @@
+<?xml version="1.0"?>
+<launch>
+
+    <!-- 1hz -->
+    <node pkg="visualization" type="plot_stuff.py" name="plotter" />
+
+
+    <node pkg="visualization" type="AMCL.py" name="AMCL" />
+
+</launch>
+
+
+<!-- rosbag play ~/car4_autonomous/car4_ws/src/car4_launch/recordings/all_topics_2025-03-04-13-27-30_zpatky.bag -->
